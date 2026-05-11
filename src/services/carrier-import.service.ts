@@ -1,7 +1,7 @@
 import type { Page } from "playwright";
 
 import type { CarrierRecord } from "@/types/carrier";
-import { upsertCarrierRecord } from "@/services/carrier-repository.service";
+import { upsertCarrier } from "@/services/carrier-write.service";
 import { processSequentialQueue } from "@/services/queue.service";
 import {
   buildSaferUrl,
@@ -70,7 +70,7 @@ async function processOneMcNumber(mcNumber: string, page: Page): Promise<Carrier
   }
 
   return withRetry(
-    () => upsertCarrierRecord(record),
+    () => upsertCarrier(record),
     UPSERT_RETRY_OPTIONS,
     `upsert MC#${mcNumber}`,
   );

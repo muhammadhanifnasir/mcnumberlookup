@@ -40,25 +40,26 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Suggested Supabase table
+## Supabase schema
 
-Create a `carriers` table with columns:
+Run the migration at:
 
-- `id` (uuid, default generated)
-- `mc_number` (text, unique)
-- `usdot_number` (text)
-- `legal_name` (text)
-- `dba_name` (text)
-- `entity_type` (text)
-- `phone` (text)
-- `physical_address` (text)
-- `mailing_address` (text)
-- `operation_classification` (text)
-- `out_of_service_date` (text)
-- `import_status` (text)
-- `import_error` (text)
-- `source_url` (text)
-- `scraped_at` (timestamptz)
+- `supabase/migrations/20260511152800_create_carriers.sql`
+
+The schema includes:
+
+- required `carriers` columns for FMCSA import data
+- unique constraint on `mc_number` for conflict-safe upserts
+- `created_at` / `updated_at` timestamps with update trigger
+- indexes for pagination (`created_at`), filtering (`import_status`, `usdot_number`) and search (`legal_name`, `dba_name`)
+
+## API query support
+
+`GET /api/carriers` supports:
+
+- pagination: `page`, `pageSize`
+- filtering: `importStatus`, `usdotStatus`
+- search: `search` (matches MC, USDOT, legal name, DBA)
 
 ## Scripts
 
