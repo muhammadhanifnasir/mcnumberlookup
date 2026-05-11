@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { APP_NAME } from "@/utils/constants";
 
 export const metadata: Metadata = {
-  title: "Dispatch CRM",
+  title: APP_NAME,
   description: "Trucking dispatch CRM foundation",
 };
 
