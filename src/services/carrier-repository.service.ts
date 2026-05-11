@@ -68,7 +68,6 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   if (record.powerUnits !== undefined) payload.power_units = parseOptionalInteger(record.powerUnits);
   if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
   if (record.importStatus !== undefined) payload.import_status = record.importStatus;
-  if (record.scrapedAt !== undefined) payload.created_at = record.scrapedAt;
 
   return payload;
 }
