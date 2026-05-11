@@ -1,31 +1,66 @@
-# Dispatch CRM Foundation
+# MCN Extracter
 
-Production-ready architecture foundation for a trucking dispatch CRM built with:
+Dedicated production-oriented FMCSA SAFER MC carrier importer built with:
 
 - Next.js 15 App Router
 - TypeScript
 - Tailwind CSS
-- shadcn/ui-style component setup
-- Supabase-ready service layer
-- PostgreSQL-ready backend integration pattern
+- shadcn/ui
+- Supabase
+- Playwright
+
+## MVP scope
+
+- MC import textarea
+- Sequential FMCSA SAFER scraping by MC number
+- Supabase persistence
+- Carrier results dashboard table
+
+## Routes
+
+- `/carrier-import`
+- `/carriers`
 
 ## Project structure
 
 - `src/app`
 - `src/components`
 - `src/lib`
-- `src/hooks`
 - `src/services`
 - `src/types`
-- `src/store`
 - `src/utils`
 
-## Route groups
+## Environment variables
 
-- `(auth)` for authentication pages
-- `(dashboard)` for protected dashboard pages
+Set environment values in `.env.local`:
 
-## Available scripts
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+## Suggested Supabase table
+
+Create a `carriers` table with columns:
+
+- `id` (uuid, default generated)
+- `mc_number` (text, unique)
+- `usdot_number` (text)
+- `legal_name` (text)
+- `dba_name` (text)
+- `entity_type` (text)
+- `phone` (text)
+- `physical_address` (text)
+- `mailing_address` (text)
+- `operation_classification` (text)
+- `out_of_service_date` (text)
+- `import_status` (text)
+- `import_error` (text)
+- `source_url` (text)
+- `scraped_at` (timestamptz)
+
+## Scripts
 
 ```bash
 npm run dev
@@ -33,9 +68,3 @@ npm run lint
 npm run build
 npm run start
 ```
-
-## Notes
-
-- Dashboard routes are protected through `requireDashboardSession`.
-- Configure Supabase environment variables using `.env.example`.
-- For local UI preview without auth setup, set `NEXT_PUBLIC_DEV_AUTH_BYPASS=true`.

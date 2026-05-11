@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "Trucking dispatch CRM foundation",
+  description: "FMCSA SAFER MC carrier importer and extraction system",
 };
 
 export default function RootLayout({

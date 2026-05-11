@@ -1,1 +1,1 @@
-export const APP_NAME = "Dispatch CRM";
+export const APP_NAME = "MCN Extracter";

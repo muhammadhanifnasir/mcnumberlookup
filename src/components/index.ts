@@ -5,7 +5,3 @@ export * from "./ui/card";
 export * from "./ui/checkbox";
 export * from "./ui/select";
 export * from "./ui/sonner";
-export * from "./auth/auth-shell";
-export * from "./auth/login-form";
-export * from "./auth/register-form";
-export * from "./auth/forgot-password-form";
