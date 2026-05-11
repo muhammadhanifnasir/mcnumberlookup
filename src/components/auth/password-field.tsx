@@ -1,14 +1,15 @@
 "use client";
 
+import { type ComponentProps, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type PasswordFieldProps = Omit<React.ComponentProps<typeof Input>, "type">;
+type PasswordFieldProps = Omit<ComponentProps<typeof Input>, "type">;
 
 export function PasswordField(props: PasswordFieldProps) {
-  const [isVisible, setIsVisible] = React.useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   return (
     <div className="relative">
