@@ -2,6 +2,7 @@ import type { CarrierRecord } from "@/types/carrier";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { buildSaferUrl } from "@/services/safer-scraper.service";
 
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
@@ -86,7 +87,7 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     powerUnits: row.power_units !== null ? String(row.power_units) : undefined,
     drivers: row.drivers !== null ? String(row.drivers) : undefined,
     importStatus: row.import_status,
-    sourceUrl: "",
+    sourceUrl: buildSaferUrl(row.mc_number),
     scrapedAt: row.created_at,
   };
 }
@@ -184,7 +185,7 @@ export async function listCarrierRecordsPaginated(
   }
 
   if (options.search) {
-    const safeSearch = options.search.replace(/[%_]/g, "");
+    const safeSearch = options.search.replace(/[^a-zA-Z0-9\s-]/g, "").trim();
     if (safeSearch) {
       query = query.or(
         `mc_number.ilike.%${safeSearch}%,usdot_number.ilike.%${safeSearch}%,legal_name.ilike.%${safeSearch}%,dba_name.ilike.%${safeSearch}%`,
