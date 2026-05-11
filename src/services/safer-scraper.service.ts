@@ -1,15 +1,12 @@
 import { chromium, type Browser, type Page } from "playwright";
 
 import type { ScrapedCarrierData } from "@/types/carrier";
-import { randomDelay } from "@/utils/delay";
 import { logger } from "@/utils/logger";
 import { extractNumber, extractTextField, normalizeStatus } from "@/utils/parser";
 
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
-const INTER_REQUEST_MIN_MS = 1_000;
-const INTER_REQUEST_MAX_MS = 2_500;
 
 export function buildSaferUrl(mcNumber: string) {
   const params = new URLSearchParams({
@@ -66,12 +63,11 @@ export async function scrapeCarrierByMcWithPage(
     return null;
   }
 
-  // Safe inter-request delay to avoid overwhelming the SAFER server
-  await randomDelay(INTER_REQUEST_MIN_MS, INTER_REQUEST_MAX_MS);
-
   const data: ScrapedCarrierData = {
     mcNumber,
-    usdotStatus: normalizeStatus(extractTextField(bodyText, "Operating Status")),
+    usdotStatus: normalizeStatus(
+      extractTextField(bodyText, "USDOT Status") ?? extractTextField(bodyText, "Operating Status"),
+    ),
     usdotNumber: extractTextField(bodyText, "USDOT Number"),
     mcs150FormDate: extractTextField(bodyText, "MCS-150 Form Date"),
     operatingAuthorityStatus: normalizeStatus(
