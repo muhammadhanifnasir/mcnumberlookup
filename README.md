@@ -40,25 +40,29 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Suggested Supabase table
+## Supabase schema
 
-Create a `carriers` table with columns:
+Run the migration in:
 
-- `id` (uuid, default generated)
+- `supabase/migrations/20260511153000_create_carriers.sql`
+
+It creates `public.carriers` with:
+
+- `id` (uuid, generated)
 - `mc_number` (text, unique)
+- `usdot_status` (text)
 - `usdot_number` (text)
+- `mcs150_form_date` (text)
+- `operating_authority_status` (text)
 - `legal_name` (text)
 - `dba_name` (text)
-- `entity_type` (text)
 - `phone` (text)
-- `physical_address` (text)
-- `mailing_address` (text)
-- `operation_classification` (text)
-- `out_of_service_date` (text)
-- `import_status` (text)
-- `import_error` (text)
-- `source_url` (text)
-- `scraped_at` (timestamptz)
+- `power_units` (integer)
+- `drivers` (integer)
+- `import_status` (`imported | not_found | failed`)
+- `created_at` / `updated_at` (timestamptz)
+
+Indexes are included for pagination, filtering, and search.
 
 ## Scripts
 

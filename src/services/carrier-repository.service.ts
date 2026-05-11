@@ -1,10 +1,41 @@
 import type { CarrierRecord } from "@/types/carrier";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/supabase/database.types";
 
 const CARRIERS_TABLE = "carriers";
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 200;
 
-function toSupabaseRow(record: CarrierRecord) {
+type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
+export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
+export type CarrierUpdatePayload = Database["public"]["Tables"]["carriers"]["Update"];
+
+export type CarrierListOptions = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  importStatus?: CarrierRecord["importStatus"];
+  usdotStatus?: string;
+};
+
+export type CarrierListResult = {
+  data: CarrierRecord[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+function parseOptionalInteger(value?: string) {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertPayload {
   return {
     mc_number: record.mcNumber,
     usdot_status: record.usdotStatus ?? null,
@@ -13,55 +44,58 @@ function toSupabaseRow(record: CarrierRecord) {
     operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
     dba_name: record.dbaName ?? null,
-    entity_type: record.entityType ?? null,
     phone: record.phone ?? null,
-    power_units: record.powerUnits ?? null,
-    drivers: record.drivers ?? null,
-    physical_address: record.physicalAddress ?? null,
-    mailing_address: record.mailingAddress ?? null,
-    operation_classification: record.operationClassification ?? null,
-    out_of_service_date: record.outOfServiceDate ?? null,
+    power_units: parseOptionalInteger(record.powerUnits),
+    drivers: parseOptionalInteger(record.drivers),
     import_status: record.importStatus,
-    import_error: record.importError ?? null,
-    source_url: record.sourceUrl,
-    scraped_at: record.scrapedAt,
+    created_at: record.scrapedAt,
   };
 }
 
-function fromSupabaseRow(row: Record<string, unknown>): CarrierRecord {
+export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): CarrierUpdatePayload {
+  const payload: CarrierUpdatePayload = {};
+
+  if (record.usdotStatus !== undefined) payload.usdot_status = record.usdotStatus ?? null;
+  if (record.usdotNumber !== undefined) payload.usdot_number = record.usdotNumber ?? null;
+  if (record.mcs150FormDate !== undefined) payload.mcs150_form_date = record.mcs150FormDate ?? null;
+  if (record.operatingAuthorityStatus !== undefined) {
+    payload.operating_authority_status = record.operatingAuthorityStatus ?? null;
+  }
+  if (record.legalName !== undefined) payload.legal_name = record.legalName ?? null;
+  if (record.dbaName !== undefined) payload.dba_name = record.dbaName ?? null;
+  if (record.phone !== undefined) payload.phone = record.phone ?? null;
+  if (record.powerUnits !== undefined) payload.power_units = parseOptionalInteger(record.powerUnits);
+  if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
+  if (record.importStatus !== undefined) payload.import_status = record.importStatus;
+  if (record.scrapedAt !== undefined) payload.created_at = record.scrapedAt;
+
+  return payload;
+}
+
+function fromSupabaseRow(row: CarrierRow): CarrierRecord {
   return {
-    id: typeof row.id === "string" ? row.id : undefined,
-    mcNumber: String(row.mc_number ?? ""),
-    usdotStatus: row.usdot_status ? String(row.usdot_status) : undefined,
-    usdotNumber: row.usdot_number ? String(row.usdot_number) : undefined,
-    mcs150FormDate: row.mcs150_form_date ? String(row.mcs150_form_date) : undefined,
-    operatingAuthorityStatus: row.operating_authority_status
-      ? String(row.operating_authority_status)
-      : undefined,
-    legalName: row.legal_name ? String(row.legal_name) : undefined,
-    dbaName: row.dba_name ? String(row.dba_name) : undefined,
-    entityType: row.entity_type ? String(row.entity_type) : undefined,
-    phone: row.phone ? String(row.phone) : undefined,
-    powerUnits: row.power_units ? String(row.power_units) : undefined,
-    drivers: row.drivers ? String(row.drivers) : undefined,
-    physicalAddress: row.physical_address ? String(row.physical_address) : undefined,
-    mailingAddress: row.mailing_address ? String(row.mailing_address) : undefined,
-    operationClassification: row.operation_classification
-      ? String(row.operation_classification)
-      : undefined,
-    outOfServiceDate: row.out_of_service_date ? String(row.out_of_service_date) : undefined,
-    importStatus: String(row.import_status ?? "failed") as CarrierRecord["importStatus"],
-    importError: row.import_error ? String(row.import_error) : undefined,
-    sourceUrl: String(row.source_url ?? ""),
-    scrapedAt: String(row.scraped_at ?? new Date(0).toISOString()),
+    id: row.id,
+    mcNumber: row.mc_number,
+    usdotStatus: row.usdot_status ?? undefined,
+    usdotNumber: row.usdot_number ?? undefined,
+    mcs150FormDate: row.mcs150_form_date ?? undefined,
+    operatingAuthorityStatus: row.operating_authority_status ?? undefined,
+    legalName: row.legal_name ?? undefined,
+    dbaName: row.dba_name ?? undefined,
+    phone: row.phone ?? undefined,
+    powerUnits: row.power_units !== null ? String(row.power_units) : undefined,
+    drivers: row.drivers !== null ? String(row.drivers) : undefined,
+    importStatus: row.import_status,
+    sourceUrl: "",
+    scrapedAt: row.created_at,
   };
 }
 
-export async function upsertCarrierRecord(record: CarrierRecord) {
+export async function createCarrierRecord(payload: CarrierInsertPayload) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from(CARRIERS_TABLE)
-    .upsert(toSupabaseRow(record), { onConflict: "mc_number" })
+    .insert(payload)
     .select()
     .single();
 
@@ -69,20 +103,126 @@ export async function upsertCarrierRecord(record: CarrierRecord) {
     throw new Error(error.message);
   }
 
-  return fromSupabaseRow((data ?? {}) as Record<string, unknown>);
+  return fromSupabaseRow(data);
 }
 
-export async function listCarrierRecords(limit = 200) {
+export async function updateCarrierRecordByMcNumber(
+  mcNumber: string,
+  payload: CarrierUpdatePayload,
+) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from(CARRIERS_TABLE)
+    .update(payload)
+    .eq("mc_number", mcNumber)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fromSupabaseRow(data);
+}
+
+export async function upsertCarrierRecord(payload: CarrierInsertPayload) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from(CARRIERS_TABLE)
+    .upsert(payload, { onConflict: "mc_number" })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fromSupabaseRow(data);
+}
+
+export async function getCarrierByMcNumber(mcNumber: string) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from(CARRIERS_TABLE)
     .select("*")
-    .order("scraped_at", { ascending: false })
+    .eq("mc_number", mcNumber)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? fromSupabaseRow(data) : null;
+}
+
+export async function listCarrierRecords(limit = 200) {
+  const result = await listCarrierRecordsPaginated({ page: 1, pageSize: limit });
+  return result.data;
+}
+
+export async function listCarrierRecordsPaginated(
+  options: CarrierListOptions = {},
+): Promise<CarrierListResult> {
+  const supabase = createSupabaseAdminClient();
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, options.pageSize ?? DEFAULT_PAGE_SIZE));
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from(CARRIERS_TABLE)
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (options.importStatus) {
+    query = query.eq("import_status", options.importStatus);
+  }
+
+  if (options.usdotStatus) {
+    query = query.eq("usdot_status", options.usdotStatus);
+  }
+
+  if (options.search) {
+    const safeSearch = options.search.replace(/[%_]/g, "");
+    if (safeSearch) {
+      query = query.or(
+        `mc_number.ilike.%${safeSearch}%,usdot_number.ilike.%${safeSearch}%,legal_name.ilike.%${safeSearch}%,dba_name.ilike.%${safeSearch}%`,
+      );
+    }
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const total = count ?? 0;
+
+  return {
+    data: (data ?? []).map((row) => fromSupabaseRow(row)),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: total > 0 ? Math.ceil(total / pageSize) : 0,
+    },
+  };
+}
+
+export async function listCarrierRetryCandidates(limit = 100) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from(CARRIERS_TABLE)
+    .select("*")
+    .eq("import_status", "failed")
+    .order("updated_at", { ascending: true })
     .limit(limit);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => fromSupabaseRow(row as Record<string, unknown>));
+  return (data ?? []).map((row) => fromSupabaseRow(row));
 }
