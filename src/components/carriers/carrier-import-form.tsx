@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingState } from "@/components/common/loading-state";
 import { CarriersTable } from "@/components/carriers/carriers-table";
 import type { CarrierRecord } from "@/types/carrier";
 import { parseMcNumbers } from "@/utils/mc";
+import { cn } from "@/lib/utils";
 
 type ImportResponse = {
   processed: number;
@@ -78,9 +79,9 @@ export function CarrierImportForm() {
                 <Button type="submit" disabled={isSubmitting || parsedCount === 0}>
                   {isSubmitting ? "Importing..." : "Start Sequential Import"}
                 </Button>
-                <Button asChild variant="outline">
-                  <Link href="/carriers">View Carriers</Link>
-                </Button>
+                <Link href="/carriers" className={cn(buttonVariants({ variant: "outline" }))}>
+                  View Carriers
+                </Link>
               </div>
             </div>
           </form>
