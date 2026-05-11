@@ -110,7 +110,14 @@ export function RegisterForm() {
 
       <div className="space-y-2">
         <Label htmlFor="role">Role</Label>
-        <Select value={role} onValueChange={(value) => setValue("role", value as RegisterFormValues["role"], { shouldValidate: true })}>
+        <Select
+          value={role}
+          onValueChange={(value) => {
+            if (value === "admin" || value === "dispatcher") {
+              setValue("role", value, { shouldValidate: true });
+            }
+          }}
+        >
           <SelectTrigger id="role">
             <SelectValue placeholder="Select your role" />
           </SelectTrigger>

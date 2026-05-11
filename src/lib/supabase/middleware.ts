@@ -5,7 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const protectedRoutes = ["/dashboard"];
-const authRoutes = ["/login", "/register", "/forgot-password", "/sign-in"];
+const authRoutes = ["/login", "/register", "/forgot-password"];
 
 const isDevBypassEnabled =
   process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "true";

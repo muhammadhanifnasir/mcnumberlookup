@@ -6,9 +6,9 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type PasswordFieldProps = Omit<ComponentProps<typeof Input>, "type">;
+type PasswordInputProps = Omit<ComponentProps<typeof Input>, "type">;
 
-export function PasswordField(props: PasswordFieldProps) {
+export function PasswordField(props: PasswordInputProps) {
   const [isVisible, setIsVisible] = useState(false);
 
   return (

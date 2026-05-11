@@ -17,7 +17,7 @@ import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
 import { FormFieldError } from "./form-field-error";
 import { PasswordField } from "./password-field";
 
-const rememberStorageKey = "dispatch_crm_remembered_email";
+const REMEMBERED_EMAIL_STORAGE_KEY = "dispatch_crm_remembered_email";
 
 export function LoginForm() {
   const router = useRouter();
@@ -39,7 +39,7 @@ export function LoginForm() {
   });
 
   useEffect(() => {
-    const rememberedEmail = window.localStorage.getItem(rememberStorageKey);
+    const rememberedEmail = window.localStorage.getItem(REMEMBERED_EMAIL_STORAGE_KEY);
 
     if (rememberedEmail) {
       setValue("email", rememberedEmail);
@@ -65,9 +65,9 @@ export function LoginForm() {
       }
 
       if (values.rememberMe) {
-        window.localStorage.setItem(rememberStorageKey, values.email);
+        window.localStorage.setItem(REMEMBERED_EMAIL_STORAGE_KEY, values.email);
       } else {
-        window.localStorage.removeItem(rememberStorageKey);
+        window.localStorage.removeItem(REMEMBERED_EMAIL_STORAGE_KEY);
       }
 
       toast.success("Signed in successfully.");
