@@ -1,19 +1,15 @@
 import { chromium, type Browser, type Page } from "playwright";
 
 import type { ScrapedCarrierData } from "@/types/carrier";
+import { randomDelay } from "@/utils/delay";
+import { logger } from "@/utils/logger";
+import { extractNumber, extractTextField, normalizeStatus } from "@/utils/parser";
 
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
-
-function extractField(text: string, label: string) {
-  const pattern = new RegExp(`${label}\\s*:?\\s*(.+)`, "i");
-  const match = text.match(pattern);
-
-  if (!match?.[1]) {
-    return undefined;
-  }
-
-  return match[1].split("\n")[0]?.trim() || undefined;
-}
+const GOTO_TIMEOUT_MS = 60_000;
+const NETWORK_IDLE_TIMEOUT_MS = 15_000;
+const INTER_REQUEST_MIN_MS = 1_000;
+const INTER_REQUEST_MAX_MS = 2_500;
 
 export function buildSaferUrl(mcNumber: string) {
   const params = new URLSearchParams({
@@ -26,26 +22,11 @@ export function buildSaferUrl(mcNumber: string) {
   return `${SAFER_BASE_URL}?${params.toString()}`;
 }
 
-export async function scrapeCarrierByMc(mcNumber: string): Promise<ScrapedCarrierData | null> {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-
-  try {
-    return scrapeCarrierByMcWithPage(page, mcNumber);
-  } finally {
-    await page.close();
-    await browser.close();
-  }
-}
-
 export async function createSaferScraperSession() {
+  logger.info("Launching Playwright browser");
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
-
-  return {
-    browser,
-    page,
-  };
+  return { browser, page };
 }
 
 export async function closeSaferScraperSession({
@@ -55,6 +36,7 @@ export async function closeSaferScraperSession({
   browser: Browser;
   page: Page;
 }) {
+  logger.info("Closing Playwright browser");
   await page.close();
   await browser.close();
 }
@@ -64,30 +46,69 @@ export async function scrapeCarrierByMcWithPage(
   mcNumber: string,
 ): Promise<ScrapedCarrierData | null> {
   const sourceUrl = buildSaferUrl(mcNumber);
+  logger.info("Navigating to SAFER", { mcNumber, sourceUrl });
+
   await page.goto(sourceUrl, {
     waitUntil: "domcontentloaded",
-    timeout: 60_000,
+    timeout: GOTO_TIMEOUT_MS,
   });
-  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => undefined);
+
+  await page
+    .waitForLoadState("networkidle", { timeout: NETWORK_IDLE_TIMEOUT_MS })
+    .catch(() => {
+      logger.warn("networkidle timeout – proceeding with available content", { mcNumber });
+    });
 
   const bodyText = await page.locator("body").innerText();
 
   if (/no records matching your query were found/i.test(bodyText)) {
+    logger.info("Carrier not found in SAFER", { mcNumber });
     return null;
   }
 
-  return {
+  // Safe inter-request delay to avoid overwhelming the SAFER server
+  await randomDelay(INTER_REQUEST_MIN_MS, INTER_REQUEST_MAX_MS);
+
+  const data: ScrapedCarrierData = {
     mcNumber,
-    usdotNumber: extractField(bodyText, "USDOT Number"),
-    legalName: extractField(bodyText, "Legal Name"),
-    dbaName: extractField(bodyText, "DBA Name"),
-    entityType: extractField(bodyText, "Entity Type"),
-    phone: extractField(bodyText, "Telephone"),
-    physicalAddress: extractField(bodyText, "Physical Address"),
-    mailingAddress: extractField(bodyText, "Mailing Address"),
-    operationClassification: extractField(bodyText, "Operation Classification"),
-    outOfServiceDate: extractField(bodyText, "Out of Service Date"),
+    usdotStatus: normalizeStatus(extractTextField(bodyText, "Operating Status")),
+    usdotNumber: extractTextField(bodyText, "USDOT Number"),
+    mcs150FormDate: extractTextField(bodyText, "MCS-150 Form Date"),
+    operatingAuthorityStatus: normalizeStatus(
+      extractTextField(bodyText, "Operating Authority Status"),
+    ),
+    legalName: extractTextField(bodyText, "Legal Name"),
+    dbaName: extractTextField(bodyText, "DBA Name"),
+    phone: extractTextField(bodyText, "Telephone"),
+    powerUnits: extractNumber(extractTextField(bodyText, "Power Units")),
+    drivers: extractNumber(extractTextField(bodyText, "Drivers")),
+    entityType: extractTextField(bodyText, "Entity Type"),
+    physicalAddress: extractTextField(bodyText, "Physical Address"),
+    mailingAddress: extractTextField(bodyText, "Mailing Address"),
+    operationClassification: extractTextField(bodyText, "Operation Classification"),
+    outOfServiceDate: extractTextField(bodyText, "Out of Service Date"),
     sourceUrl,
     scrapedAt: new Date().toISOString(),
   };
+
+  logger.info("Scraped carrier data", {
+    mcNumber,
+    legalName: data.legalName,
+    usdotStatus: data.usdotStatus,
+  });
+
+  return data;
+}
+
+/** Standalone scrape that creates and closes its own browser session. */
+export async function scrapeCarrierByMc(mcNumber: string): Promise<ScrapedCarrierData | null> {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
+    return await scrapeCarrierByMcWithPage(page, mcNumber);
+  } finally {
+    await page.close();
+    await browser.close();
+  }
 }

@@ -7,11 +7,16 @@ const CARRIERS_TABLE = "carriers";
 function toSupabaseRow(record: CarrierRecord) {
   return {
     mc_number: record.mcNumber,
+    usdot_status: record.usdotStatus ?? null,
     usdot_number: record.usdotNumber ?? null,
+    mcs150_form_date: record.mcs150FormDate ?? null,
+    operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
     dba_name: record.dbaName ?? null,
     entity_type: record.entityType ?? null,
     phone: record.phone ?? null,
+    power_units: record.powerUnits ?? null,
+    drivers: record.drivers ?? null,
     physical_address: record.physicalAddress ?? null,
     mailing_address: record.mailingAddress ?? null,
     operation_classification: record.operationClassification ?? null,
@@ -27,11 +32,18 @@ function fromSupabaseRow(row: Record<string, unknown>): CarrierRecord {
   return {
     id: typeof row.id === "string" ? row.id : undefined,
     mcNumber: String(row.mc_number ?? ""),
+    usdotStatus: row.usdot_status ? String(row.usdot_status) : undefined,
     usdotNumber: row.usdot_number ? String(row.usdot_number) : undefined,
+    mcs150FormDate: row.mcs150_form_date ? String(row.mcs150_form_date) : undefined,
+    operatingAuthorityStatus: row.operating_authority_status
+      ? String(row.operating_authority_status)
+      : undefined,
     legalName: row.legal_name ? String(row.legal_name) : undefined,
     dbaName: row.dba_name ? String(row.dba_name) : undefined,
     entityType: row.entity_type ? String(row.entity_type) : undefined,
     phone: row.phone ? String(row.phone) : undefined,
+    powerUnits: row.power_units ? String(row.power_units) : undefined,
+    drivers: row.drivers ? String(row.drivers) : undefined,
     physicalAddress: row.physical_address ? String(row.physical_address) : undefined,
     mailingAddress: row.mailing_address ? String(row.mailing_address) : undefined,
     operationClassification: row.operation_classification
