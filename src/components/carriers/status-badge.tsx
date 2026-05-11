@@ -9,7 +9,7 @@ const statusClassMap: Record<CarrierImportStatus, string> = {
 export function StatusBadge({ status }: { status: CarrierImportStatus }) {
   return (
     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusClassMap[status]}`}>
-      {status.replace("_", " ")}
+      {status.replaceAll("_", " ")}
     </span>
   );
 }

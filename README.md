@@ -1,4 +1,4 @@
-# MCN Extracter
+# MCN Extractor
 
 Dedicated production-oriented FMCSA SAFER MC carrier importer built with:
 
