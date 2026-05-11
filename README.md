@@ -11,14 +11,14 @@ Production-ready architecture foundation for a trucking dispatch CRM built with:
 
 ## Project structure
 
-- `/home/runner/work/mcnextracter/mcnextracter/src/app`
-- `/home/runner/work/mcnextracter/mcnextracter/src/components`
-- `/home/runner/work/mcnextracter/mcnextracter/src/lib`
-- `/home/runner/work/mcnextracter/mcnextracter/src/hooks`
-- `/home/runner/work/mcnextracter/mcnextracter/src/services`
-- `/home/runner/work/mcnextracter/mcnextracter/src/types`
-- `/home/runner/work/mcnextracter/mcnextracter/src/store`
-- `/home/runner/work/mcnextracter/mcnextracter/src/utils`
+- `src/app`
+- `src/components`
+- `src/lib`
+- `src/hooks`
+- `src/services`
+- `src/types`
+- `src/store`
+- `src/utils`
 
 ## Route groups
 
