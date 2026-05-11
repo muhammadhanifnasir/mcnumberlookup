@@ -46,5 +46,6 @@ export async function withRetry<T>(
     }
   }
 
-  throw lastError ?? new Error(`${label} failed after ${maxAttempts} attempts`);
+  // maxAttempts <= 0: treat as immediate failure
+  throw new Error(`${label} failed: maxAttempts must be at least 1`);
 }

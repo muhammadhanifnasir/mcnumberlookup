@@ -20,7 +20,8 @@ export async function processSequentialQueue<T, R>(
   logger.info("Starting sequential queue", { total: items.length });
 
   for (let i = 0; i < items.length; i++) {
-    const item = items[i]!;
+    const item = items[i];
+    if (item === undefined) continue;
     logger.info(`Processing queue item ${i + 1}/${items.length}`, {
       item: String(item),
     });
