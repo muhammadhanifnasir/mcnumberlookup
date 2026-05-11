@@ -7,8 +7,10 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = Number.parseInt(searchParams.get("page") ?? "", 10);
-    const pageSize = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    const page = Number.parseInt(pageParam ?? "1", 10);
+    const pageSize = Number.parseInt(pageSizeParam ?? "50", 10);
     const search = searchParams.get("search") ?? undefined;
     const importStatus = searchParams.get("importStatus") ?? undefined;
     const usdotStatus = searchParams.get("usdotStatus") ?? undefined;
