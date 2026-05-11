@@ -1,12 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
-import { getSupabaseServiceRoleOrAnonKey, getSupabaseUrl } from "@/lib/supabase/shared";
+
+import type { Database } from "@/lib/supabase/database.types";
+import { getSupabaseServiceRoleOrAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 export function createSupabaseAdminClient() {
-  const supabaseUrl = getSupabaseUrl();
-  const key = getSupabaseServiceRoleOrAnonKey();
-
-  return createClient<Database>(supabaseUrl, key, {
+  return createClient<Database>(getSupabaseUrl(), getSupabaseServiceRoleOrAnonKey(), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

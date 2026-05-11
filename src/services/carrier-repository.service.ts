@@ -1,93 +1,78 @@
-import type { CarrierImportStatus, CarrierRecord } from "@/types/carrier";
-import type { Database } from "@/types/database";
+import type { CarrierRecord } from "@/types/carrier";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/supabase/database.types";
+import { buildSaferUrl } from "@/services/safer-scraper.service";
 
 const CARRIERS_TABLE = "carriers";
-const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
 
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
-type CarrierInsert = Database["public"]["Tables"]["carriers"]["Insert"];
-type CarrierUpdate = Database["public"]["Tables"]["carriers"]["Update"];
+export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
+export type CarrierUpdatePayload = Database["public"]["Tables"]["carriers"]["Update"];
 
 export type CarrierListOptions = {
   page?: number;
   pageSize?: number;
   search?: string;
-  importStatus?: CarrierImportStatus | CarrierImportStatus[];
+  importStatus?: CarrierRecord["importStatus"];
   usdotStatus?: string;
 };
 
-export type PaginatedCarrierRecords = {
+export type CarrierListResult = {
   data: CarrierRecord[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
-function normalizePage(page?: number) {
-  return Number.isInteger(page) && page && page > 0 ? page : DEFAULT_PAGE;
-}
-
-function normalizePageSize(pageSize?: number) {
-  if (!Number.isInteger(pageSize) || !pageSize || pageSize <= 0) {
-    return DEFAULT_PAGE_SIZE;
-  }
-
-  return Math.min(pageSize, MAX_PAGE_SIZE);
-}
-
-function toNullableInteger(value?: string) {
+function parseOptionalInteger(value?: string) {
   if (!value) return null;
-  const numericValue = Number.parseInt(value.replaceAll(",", "").trim(), 10);
-  return Number.isNaN(numericValue) ? null : numericValue;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function toNullableDate(value?: string) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString().slice(0, 10);
-}
-
-function toCarrierInsert(record: CarrierRecord): CarrierInsert {
+export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertPayload {
   return {
     mc_number: record.mcNumber,
     usdot_status: record.usdotStatus ?? null,
     usdot_number: record.usdotNumber ?? null,
-    mcs150_form_date: toNullableDate(record.mcs150FormDate),
+    mcs150_form_date: record.mcs150FormDate ?? null,
     operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
     dba_name: record.dbaName ?? null,
     phone: record.phone ?? null,
-    power_units: toNullableInteger(record.powerUnits),
-    drivers: toNullableInteger(record.drivers),
+    power_units: parseOptionalInteger(record.powerUnits),
+    drivers: parseOptionalInteger(record.drivers),
     import_status: record.importStatus,
     created_at: record.scrapedAt,
   };
 }
 
-function toCarrierUpdate(record: Partial<CarrierRecord>): CarrierUpdate {
-  return {
-    usdot_status: record.usdotStatus,
-    usdot_number: record.usdotNumber,
-    mcs150_form_date: record.mcs150FormDate ? toNullableDate(record.mcs150FormDate) : undefined,
-    operating_authority_status: record.operatingAuthorityStatus,
-    legal_name: record.legalName,
-    dba_name: record.dbaName,
-    phone: record.phone,
-    power_units: record.powerUnits ? toNullableInteger(record.powerUnits) : undefined,
-    drivers: record.drivers ? toNullableInteger(record.drivers) : undefined,
-    import_status: record.importStatus,
-  };
+export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): CarrierUpdatePayload {
+  const payload: CarrierUpdatePayload = {};
+
+  if (record.usdotStatus !== undefined) payload.usdot_status = record.usdotStatus ?? null;
+  if (record.usdotNumber !== undefined) payload.usdot_number = record.usdotNumber ?? null;
+  if (record.mcs150FormDate !== undefined) payload.mcs150_form_date = record.mcs150FormDate ?? null;
+  if (record.operatingAuthorityStatus !== undefined) {
+    payload.operating_authority_status = record.operatingAuthorityStatus ?? null;
+  }
+  if (record.legalName !== undefined) payload.legal_name = record.legalName ?? null;
+  if (record.dbaName !== undefined) payload.dba_name = record.dbaName ?? null;
+  if (record.phone !== undefined) payload.phone = record.phone ?? null;
+  if (record.powerUnits !== undefined) payload.power_units = parseOptionalInteger(record.powerUnits);
+  if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
+  if (record.importStatus !== undefined) payload.import_status = record.importStatus;
+
+  return payload;
 }
 
-function fromCarrierRow(row: CarrierRow, fallback?: Partial<CarrierRecord>): CarrierRecord {
+function fromSupabaseRow(row: CarrierRow): CarrierRecord {
   return {
     id: row.id,
     mcNumber: row.mc_number,
@@ -101,17 +86,16 @@ function fromCarrierRow(row: CarrierRow, fallback?: Partial<CarrierRecord>): Car
     powerUnits: row.power_units !== null ? String(row.power_units) : undefined,
     drivers: row.drivers !== null ? String(row.drivers) : undefined,
     importStatus: row.import_status,
-    importError: fallback?.importError,
-    sourceUrl: fallback?.sourceUrl ?? "",
-    scrapedAt: row.created_at ?? fallback?.scrapedAt ?? new Date(0).toISOString(),
+    sourceUrl: buildSaferUrl(row.mc_number),
+    scrapedAt: row.created_at,
   };
 }
 
-export async function upsertCarrierRecord(record: CarrierRecord) {
+export async function createCarrierRecord(payload: CarrierInsertPayload) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from(CARRIERS_TABLE)
-    .upsert(toCarrierInsert(record), { onConflict: "mc_number" })
+    .insert(payload)
     .select()
     .single();
 
@@ -119,29 +103,17 @@ export async function upsertCarrierRecord(record: CarrierRecord) {
     throw new Error(error.message);
   }
 
-  return fromCarrierRow(data as CarrierRow, record);
+  return fromSupabaseRow(data);
 }
 
-export async function createCarrierRecord(record: CarrierRecord) {
+export async function updateCarrierRecordByMcNumber(
+  mcNumber: string,
+  payload: CarrierUpdatePayload,
+) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from(CARRIERS_TABLE)
-    .insert(toCarrierInsert(record))
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return fromCarrierRow(data as CarrierRow, record);
-}
-
-export async function updateCarrierByMcNumber(mcNumber: string, updates: Partial<CarrierRecord>) {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .update(toCarrierUpdate(updates))
+    .update(payload)
     .eq("mc_number", mcNumber)
     .select()
     .single();
@@ -150,7 +122,22 @@ export async function updateCarrierByMcNumber(mcNumber: string, updates: Partial
     throw new Error(error.message);
   }
 
-  return fromCarrierRow(data as CarrierRow, updates);
+  return fromSupabaseRow(data);
+}
+
+export async function upsertCarrierRecord(payload: CarrierInsertPayload) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from(CARRIERS_TABLE)
+    .upsert(payload, { onConflict: "mc_number" })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fromSupabaseRow(data);
 }
 
 export async function getCarrierByMcNumber(mcNumber: string) {
@@ -165,34 +152,31 @@ export async function getCarrierByMcNumber(mcNumber: string) {
     throw new Error(error.message);
   }
 
-  if (!data) return null;
-  return fromCarrierRow(data as CarrierRow);
+  return data ? fromSupabaseRow(data) : null;
 }
 
-export async function deleteCarrierByMcNumber(mcNumber: string) {
+export async function listCarrierRecords(limit = 200) {
+  const result = await listCarrierRecordsPaginated({ page: 1, pageSize: limit });
+  return result.data;
+}
+
+export async function listCarrierRecordsPaginated(
+  options: CarrierListOptions = {},
+): Promise<CarrierListResult> {
   const supabase = createSupabaseAdminClient();
-  const { error } = await supabase.from(CARRIERS_TABLE).delete().eq("mc_number", mcNumber);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-}
-
-export async function listCarriers(options: CarrierListOptions = {}): Promise<PaginatedCarrierRecords> {
-  const page = normalizePage(options.page);
-  const pageSize = normalizePageSize(options.pageSize);
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, options.pageSize ?? DEFAULT_PAGE_SIZE));
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const supabase = createSupabaseAdminClient();
-  let query = supabase.from(CARRIERS_TABLE).select("*", { count: "exact" });
+  let query = supabase
+    .from(CARRIERS_TABLE)
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (options.importStatus) {
-    if (Array.isArray(options.importStatus)) {
-      query = query.in("import_status", options.importStatus);
-    } else {
-      query = query.eq("import_status", options.importStatus);
-    }
+    query = query.eq("import_status", options.importStatus);
   }
 
   if (options.usdotStatus) {
@@ -200,49 +184,39 @@ export async function listCarriers(options: CarrierListOptions = {}): Promise<Pa
   }
 
   if (options.search) {
-    const term = options.search.trim();
-    if (term.length > 0) {
+    const safeSearch = options.search.replace(/[^a-zA-Z0-9\s-]/g, "").trim();
+    if (safeSearch) {
       query = query.or(
-        `mc_number.ilike.%${term}%,usdot_number.ilike.%${term}%,legal_name.ilike.%${term}%,dba_name.ilike.%${term}%`,
+        `mc_number.ilike.%${safeSearch}%,usdot_number.ilike.%${safeSearch}%,legal_name.ilike.%${safeSearch}%,dba_name.ilike.%${safeSearch}%`,
       );
     }
   }
 
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const { data, error, count } = await query;
 
   if (error) {
     throw new Error(error.message);
   }
 
   const total = count ?? 0;
-  const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0;
-  const rows = (data ?? []) as CarrierRow[];
-  const mapped = rows.map((row) => fromCarrierRow(row));
 
   return {
-    data: mapped,
-    total,
-    page,
-    pageSize,
-    totalPages,
-    hasNextPage: page < totalPages,
-    hasPreviousPage: page > 1,
+    data: (data ?? []).map((row) => fromSupabaseRow(row)),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: total > 0 ? Math.ceil(total / pageSize) : 0,
+    },
   };
 }
 
-export async function listCarrierRecords(limit = 200) {
-  const { data } = await listCarriers({ page: 1, pageSize: limit });
-  return data;
-}
-
-export async function listCarrierRecordsForRetry(limit = 100) {
+export async function listCarrierRetryCandidates(limit = 100) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from(CARRIERS_TABLE)
     .select("*")
-    .in("import_status", ["failed", "not_found"])
+    .eq("import_status", "failed")
     .order("updated_at", { ascending: true })
     .limit(limit);
 
@@ -250,5 +224,5 @@ export async function listCarrierRecordsForRetry(limit = 100) {
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as CarrierRow[]).map((row) => fromCarrierRow(row));
+  return (data ?? []).map((row) => fromSupabaseRow(row));
 }

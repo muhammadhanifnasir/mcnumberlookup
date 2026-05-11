@@ -1,46 +1,29 @@
 import { NextResponse } from "next/server";
 
-import { listCarriers } from "@/services/carrier-repository.service";
-import type { CarrierImportStatus } from "@/types/carrier";
+import { listCarrierRecordsPaginated } from "@/services/carrier-repository.service";
 
 export const runtime = "nodejs";
-
-const VALID_IMPORT_STATUSES: CarrierImportStatus[] = ["imported", "not_found", "failed"];
-
-function parseImportStatusParam(statusParam: string | null) {
-  if (!statusParam) return undefined;
-
-  const statuses = statusParam
-    .split(",")
-    .map((status) => status.trim())
-    .filter((status): status is CarrierImportStatus =>
-      VALID_IMPORT_STATUSES.includes(status as CarrierImportStatus),
-    );
-
-  return statuses.length <= 1 ? statuses[0] : statuses;
-}
-
-function parsePositiveInt(value: string | null, fallback: number) {
-  if (!value) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) || parsed <= 0 ? fallback : parsed;
-}
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parsePositiveInt(searchParams.get("page"), 1);
-    const pageSize = parsePositiveInt(searchParams.get("pageSize"), 50);
-    const search = searchParams.get("search")?.trim() || undefined;
-    const usdotStatus = searchParams.get("usdotStatus")?.trim() || undefined;
-    const importStatus = parseImportStatusParam(searchParams.get("importStatus"));
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    const page = Number.parseInt(pageParam ?? "1", 10);
+    const pageSize = Number.parseInt(pageSizeParam ?? "50", 10);
+    const search = searchParams.get("search") ?? undefined;
+    const importStatus = searchParams.get("importStatus") ?? undefined;
+    const usdotStatus = searchParams.get("usdotStatus") ?? undefined;
 
-    const result = await listCarriers({
-      page,
-      pageSize,
+    const result = await listCarrierRecordsPaginated({
+      page: Number.isFinite(page) ? page : 1,
+      pageSize: Number.isFinite(pageSize) ? pageSize : 50,
       search,
+      importStatus:
+        importStatus === "imported" || importStatus === "not_found" || importStatus === "failed"
+          ? importStatus
+          : undefined,
       usdotStatus,
-      importStatus,
     });
 
     return NextResponse.json(result);

@@ -42,24 +42,27 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 ## Supabase schema
 
-Run the migration at:
+Run the migration in:
 
-- `supabase/migrations/20260511152800_create_carriers.sql`
+- `supabase/migrations/20260511153000_create_carriers.sql`
 
-The schema includes:
+It creates `public.carriers` with:
 
-- required `carriers` columns for FMCSA import data
-- unique constraint on `mc_number` for conflict-safe upserts
-- `created_at` / `updated_at` timestamps with update trigger
-- indexes for pagination (`created_at`), filtering (`import_status`, `usdot_number`) and search (`legal_name`, `dba_name`)
+- `id` (uuid, generated)
+- `mc_number` (text, unique)
+- `usdot_status` (text)
+- `usdot_number` (text)
+- `mcs150_form_date` (text)
+- `operating_authority_status` (text)
+- `legal_name` (text)
+- `dba_name` (text)
+- `phone` (text)
+- `power_units` (integer)
+- `drivers` (integer)
+- `import_status` (`imported | not_found | failed`)
+- `created_at` / `updated_at` (timestamptz)
 
-## API query support
-
-`GET /api/carriers` supports:
-
-- pagination: `page`, `pageSize`
-- filtering: `importStatus`, `usdotStatus`
-- search: `search` (matches MC, USDOT, legal name, DBA)
+Indexes are included for pagination, filtering, and search.
 
 ## Scripts
 
