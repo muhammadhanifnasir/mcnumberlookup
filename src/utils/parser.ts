@@ -68,3 +68,23 @@ export function extractEmail(text: string): string | undefined {
   const email = labeledEmail?.match(EMAIL_PATTERN)?.[0] ?? text.match(EMAIL_PATTERN)?.[0];
   return email?.trim();
 }
+
+export function extractEmailFromMailtoHref(href: string | null | undefined): string | undefined {
+  if (!href) return undefined;
+
+  const normalizedHref = href.trim();
+  if (!/^mailto:/i.test(normalizedHref)) return undefined;
+
+  const withoutScheme = normalizedHref.replace(/^mailto:/i, "");
+  const addressPart = withoutScheme.split("?")[0] ?? "";
+
+  let decodedAddress = addressPart;
+  try {
+    decodedAddress = decodeURIComponent(addressPart);
+  } catch {
+    decodedAddress = addressPart;
+  }
+
+  const email = decodedAddress.match(EMAIL_PATTERN)?.[0];
+  return email?.trim();
+}
