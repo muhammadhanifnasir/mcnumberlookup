@@ -7,6 +7,10 @@ const columns = [
   { key: "mc", label: "MC" },
   { key: "usdot", label: "USDOT" },
   { key: "name", label: "Carrier" },
+  { key: "ownerStatus", label: "Owner Status" },
+  { key: "email", label: "Email" },
+  { key: "physicalAddress", label: "Physical Address" },
+  { key: "truckType", label: "Truck Type" },
   { key: "phone", label: "Phone" },
   { key: "status", label: "Status" },
   { key: "updated", label: "Scraped At" },
@@ -20,6 +24,10 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
           <td className="whitespace-nowrap px-4 py-3 font-medium text-card-foreground">MC {carrier.mcNumber}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.usdotNumber ?? "-"}</td>
           <td className="px-4 py-3 text-card-foreground">{carrier.legalName ?? carrier.dbaName ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.ownerStatus ?? "-"}</td>
+          <td className="px-4 py-3 text-muted-foreground">{carrier.emailAddress ?? "-"}</td>
+          <td className="px-4 py-3 text-muted-foreground">{carrier.physicalAddress ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.truckType ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.phone ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3">
             <StatusBadge status={carrier.importStatus} />

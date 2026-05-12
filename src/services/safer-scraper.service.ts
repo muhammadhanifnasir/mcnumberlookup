@@ -3,7 +3,14 @@ import { chromium, type Browser, type Page } from "playwright-core";
 
 import type { ScrapedCarrierData } from "@/types/carrier";
 import { logger } from "@/utils/logger";
-import { extractNumber, extractPhone, extractTextField, normalizeStatus } from "@/utils/parser";
+import {
+  extractEmail,
+  extractFirstTextField,
+  extractNumber,
+  extractPhone,
+  extractTextField,
+  normalizeStatus,
+} from "@/utils/parser";
 
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
@@ -74,6 +81,9 @@ export async function scrapeCarrierByMcWithPage(
     usdotStatus: normalizeStatus(
       extractTextField(bodyText, "USDOT Status") ?? extractTextField(bodyText, "Operating Status"),
     ),
+    ownerStatus: normalizeStatus(
+      extractFirstTextField(bodyText, ["Owner Status", "Entity Type", "Carrier Operation"]),
+    ),
     usdotNumber: extractTextField(bodyText, "USDOT Number"),
     mcs150FormDate: extractTextField(bodyText, "MCS-150 Form Date"),
     operatingAuthorityStatus: normalizeStatus(
@@ -81,11 +91,13 @@ export async function scrapeCarrierByMcWithPage(
     ),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
+    emailAddress: extractEmail(bodyText),
     phone: extractPhone(bodyText),
     powerUnits: extractNumber(extractTextField(bodyText, "Power Units")),
     drivers: extractNumber(extractTextField(bodyText, "Drivers")),
     entityType: extractTextField(bodyText, "Entity Type"),
     physicalAddress: extractTextField(bodyText, "Physical Address"),
+    truckType: extractFirstTextField(bodyText, ["Truck Type", "Vehicle Type", "Cargo Carried"]),
     mailingAddress: extractTextField(bodyText, "Mailing Address"),
     operationClassification: extractTextField(bodyText, "Operation Classification"),
     outOfServiceDate: extractTextField(bodyText, "Out of Service Date"),

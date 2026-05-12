@@ -72,9 +72,13 @@ export function CarrierDetailsModal({ carrier, onClose }: CarrierDetailsModalPro
             <DetailsRow label="MC Number" value={carrier.mcNumber} />
             <DetailsRow label="USDOT Number" value={carrier.usdotNumber} />
             <DetailsRow label="Legal Name" value={carrier.legalName ?? carrier.dbaName} />
+            <DetailsRow label="Owner Status" value={carrier.ownerStatus} />
+            <DetailsRow label="Email Address" value={carrier.emailAddress} />
             <DetailsRow label="Phone" value={carrier.phone} />
             <DetailsRow label="Power Units" value={carrier.powerUnits} />
             <DetailsRow label="Drivers" value={carrier.drivers} />
+            <DetailsRow label="Physical Address" value={carrier.physicalAddress} />
+            <DetailsRow label="Truck Type" value={carrier.truckType} />
             <DetailsRow label="Created At" value={new Date(carrier.scrapedAt).toLocaleString()} />
             <DetailsRow label="Source URL" value={carrier.sourceUrl} />
           </div>

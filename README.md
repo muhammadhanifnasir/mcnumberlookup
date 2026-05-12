@@ -42,9 +42,10 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 ## Supabase schema
 
-Run the migration in:
+Run the migrations in:
 
 - `supabase/migrations/20260511153000_create_carriers.sql`
+- `supabase/migrations/20260512130000_add_carrier_extraction_fields.sql`
 
 It creates `public.carriers` with:
 
@@ -56,9 +57,13 @@ It creates `public.carriers` with:
 - `operating_authority_status` (text)
 - `legal_name` (text)
 - `dba_name` (text)
+- `owner_status` (text)
+- `email_address` (text)
 - `phone` (text)
 - `power_units` (integer)
 - `drivers` (integer)
+- `physical_address` (text)
+- `truck_type` (text)
 - `import_status` (`imported | not_found | failed`)
 - `created_at` / `updated_at` (timestamptz)
 
