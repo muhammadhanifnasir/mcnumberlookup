@@ -76,7 +76,6 @@ export async function processConcurrentQueue<T, R>(
       if (!nextTask) return;
 
       const { item, index } = nextTask;
-      if (item === undefined) continue;
 
       logger.info(`Worker ${workerId + 1} processing item ${index + 1}/${total}`, {
         item: String(item),

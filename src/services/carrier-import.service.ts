@@ -104,6 +104,9 @@ export async function importCarriersSequentially(mcNumbers: string[]) {
     const queueResults = await processConcurrentQueue(
       mcNumbers,
       async (mcNumber, _index, _total, workerId) => {
+        if (workerId < 0 || workerId >= pages.length) {
+          throw new Error(`Worker ${workerId} is out of bounds for ${pages.length} pages`);
+        }
         const page = pages[workerId]!;
 
         try {
