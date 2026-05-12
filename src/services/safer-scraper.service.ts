@@ -88,7 +88,8 @@ export async function scrapeCarrierByMcWithPage(
     .first()
     .getAttribute("href")
     .catch(() => null);
-  const emailAddress = extractEmail(bodyText) ?? extractEmailFromMailtoHref(mailtoHref);
+  const emailAddress =
+    extractEmail(bodyText) ?? (mailtoHref ? extractEmailFromMailtoHref(mailtoHref) : undefined);
 
   if (/no records matching your query were found/i.test(bodyText)) {
     logger.info("Carrier not found in SAFER", { mcNumber });
