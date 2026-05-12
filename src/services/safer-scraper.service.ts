@@ -3,7 +3,7 @@ import { chromium, type Browser, type Page } from "playwright-core";
 
 import type { ScrapedCarrierData } from "@/types/carrier";
 import { logger } from "@/utils/logger";
-import { extractNumber, extractTextField, normalizeStatus } from "@/utils/parser";
+import { extractNumber, extractPhone, extractTextField, normalizeStatus } from "@/utils/parser";
 
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
@@ -81,7 +81,7 @@ export async function scrapeCarrierByMcWithPage(
     ),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
-    phone: extractTextField(bodyText, "Telephone"),
+    phone: extractPhone(bodyText),
     powerUnits: extractNumber(extractTextField(bodyText, "Power Units")),
     drivers: extractNumber(extractTextField(bodyText, "Drivers")),
     entityType: extractTextField(bodyText, "Entity Type"),

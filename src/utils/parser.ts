@@ -28,3 +28,20 @@ export function extractNumber(raw: string | undefined): string | undefined {
   const match = raw.match(/\d[\d,]*/);
   return match ? match[0].replace(/,/g, "") : undefined;
 }
+
+function extractPhoneNumber(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const match = raw.match(
+    /(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?/i,
+  );
+  return match ? match[0].trim() : undefined;
+}
+
+export function extractPhone(text: string): string | undefined {
+  const labeledPhone =
+    extractTextField(text, "Telephone") ??
+    extractTextField(text, "Telephone Number") ??
+    extractTextField(text, "Phone");
+
+  return extractPhoneNumber(labeledPhone) ?? labeledPhone;
+}
