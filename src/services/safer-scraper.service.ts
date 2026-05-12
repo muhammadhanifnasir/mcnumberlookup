@@ -17,11 +17,6 @@ const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
 
-function normalizePageText(raw: string | null | undefined) {
-  if (!raw) return "";
-  return raw.replace(/\u00a0/g, " ").replace(/\r/g, "").trim();
-}
-
 export function buildSaferUrl(mcNumber: string) {
   const params = new URLSearchParams({
     searchtype: "ANY",
@@ -75,14 +70,7 @@ export async function scrapeCarrierByMcWithPage(
       logger.warn("networkidle timeout – proceeding with available content", { mcNumber });
     });
 
-  const innerText = await page.locator("body").innerText().catch(() => "");
-  const textContent = await page.locator("body").textContent().catch(() => "");
-  const normalizedInnerText = normalizePageText(innerText);
-  const normalizedTextContent = normalizePageText(textContent);
-  const bodyText =
-    normalizedInnerText.length >= normalizedTextContent.length
-      ? normalizedInnerText
-      : normalizedTextContent;
+  const bodyText = await page.locator("body").innerText();
   const mailtoHref = await page.locator('a[href^="mailto:"]').first().getAttribute("href");
   const emailAddress = extractEmail(bodyText) ?? extractEmailFromMailtoHref(mailtoHref);
 
