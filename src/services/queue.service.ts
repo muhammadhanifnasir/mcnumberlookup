@@ -66,17 +66,16 @@ export async function processConcurrentQueue<T, R>(
 
   const workerCount = Math.max(1, Math.min(concurrency, total));
   const results = new Array<QueueResult<T, R>>(total);
-  let nextIndex = 0;
+  const pending = items.map((item, index) => ({ item, index }));
 
   logger.info("Starting concurrent queue", { total, concurrency: workerCount });
 
   async function runWorker(workerId: number) {
     while (true) {
-      const index = nextIndex;
-      nextIndex += 1;
-      if (index >= total) return;
+      const nextTask = pending.shift();
+      if (!nextTask) return;
 
-      const item = items[index];
+      const { item, index } = nextTask;
       if (item === undefined) continue;
 
       logger.info(`Worker ${workerId + 1} processing item ${index + 1}/${total}`, {

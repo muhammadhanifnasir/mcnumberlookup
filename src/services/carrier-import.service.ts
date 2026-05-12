@@ -27,8 +27,8 @@ const UPSERT_RETRY_OPTIONS = {
 
 const DEFAULT_IMPORT_CONCURRENCY = 4;
 const MAX_IMPORT_CONCURRENCY = 8;
-const INTER_REQUEST_MIN_MS = 150;
-const INTER_REQUEST_MAX_MS = 500;
+const INTER_REQUEST_MIN_MS = 500;
+const INTER_REQUEST_MAX_MS = 1_200;
 
 function resolveImportConcurrency(total: number) {
   const raw = process.env.IMPORT_CONCURRENCY;
@@ -104,10 +104,7 @@ export async function importCarriersSequentially(mcNumbers: string[]) {
     const queueResults = await processConcurrentQueue(
       mcNumbers,
       async (mcNumber, _index, _total, workerId) => {
-        const page = pages[workerId];
-        if (!page) {
-          throw new Error(`Missing scraper page for worker ${workerId}`);
-        }
+        const page = pages[workerId]!;
 
         try {
           return await processOneMcNumber(mcNumber, page);
