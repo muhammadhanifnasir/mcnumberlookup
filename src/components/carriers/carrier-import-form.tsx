@@ -62,7 +62,8 @@ export function CarrierImportForm() {
         <CardHeader>
           <CardTitle>Import MC Numbers</CardTitle>
           <CardDescription>
-            Paste MC numbers separated by line, comma, or semicolon. Imports run sequentially.
+            Paste MC numbers separated by line, comma, or semicolon. You can also enter ranges like
+            1000-1010. Imports run sequentially.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -70,7 +71,7 @@ export function CarrierImportForm() {
             <textarea
               value={mcInput}
               onChange={(event) => setMcInput(event.target.value)}
-              placeholder="MC 123456\nMC 654321"
+              placeholder="MC 123456\nMC 654321\n1000-1010"
               className="min-h-40 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
             />
             <div className="flex flex-wrap items-center justify-between gap-3">

@@ -226,3 +226,31 @@ export async function listCarrierRetryCandidates(limit = 100) {
 
   return (data ?? []).map((row) => fromSupabaseRow(row));
 }
+
+export async function deleteCarrierRecordByMcNumber(mcNumber: string) {
+  const supabase = createSupabaseAdminClient();
+  const { error, count } = await supabase
+    .from(CARRIERS_TABLE)
+    .delete({ count: "exact" })
+    .eq("mc_number", mcNumber);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function deleteAllCarrierRecords() {
+  const supabase = createSupabaseAdminClient();
+  const { error, count } = await supabase
+    .from(CARRIERS_TABLE)
+    .delete({ count: "exact" })
+    .not("id", "is", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}

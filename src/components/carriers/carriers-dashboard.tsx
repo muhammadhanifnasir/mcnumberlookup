@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Eye, RefreshCcw, RotateCcw } from "lucide-react";
+import { Eye, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
 
 import { CarrierDetailsModal } from "@/components/carriers/carrier-details-modal";
 import { StatusBadge } from "@/components/carriers/status-badge";
@@ -24,6 +24,8 @@ type CarrierListResponse = {
   error?: string;
 };
 
+const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
+
 export function CarriersDashboard() {
   const [records, setRecords] = useState<CarrierRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ export function CarriersDashboard() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [retryingMc, setRetryingMc] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierRecord | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
 
@@ -86,6 +90,18 @@ export function CarriersDashboard() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!confirmDeleteAll) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setConfirmDeleteAll(false);
+    }, CONFIRM_DELETE_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [confirmDeleteAll]);
+
   const retryImport = useCallback(async (mcNumber: string) => {
     try {
       setRetryingMc(mcNumber);
@@ -105,6 +121,33 @@ export function CarriersDashboard() {
       setRetryingMc(null);
     }
   }, [loadData]);
+
+  const deleteAllCarriers = useCallback(async () => {
+    if (!confirmDeleteAll) {
+      setConfirmDeleteAll(true);
+      return;
+    }
+
+    try {
+      setDeletingAll(true);
+      setError(null);
+      setConfirmDeleteAll(false);
+
+      const response = await fetch("/api/carriers?all=true", { method: "DELETE" });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete carriers.");
+      }
+
+      setSelectedCarrier(null);
+      setPage(1);
+      await loadData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete carriers.");
+    } finally {
+      setDeletingAll(false);
+    }
+  }, [confirmDeleteAll, loadData]);
 
   const columns = useMemo<ColumnDef<CarrierRecord>[]>(
     () => [
@@ -210,10 +253,22 @@ export function CarriersDashboard() {
           <div className="w-full lg:max-w-md">
             <SearchBar value={searchInput} onChange={setSearchInput} disabled={loading} />
           </div>
-          <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void deleteAllCarriers()}
+              disabled={loading || deletingAll}
+              aria-label={confirmDeleteAll ? "Click again to confirm deletion of all carriers" : "Delete all carriers"}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deletingAll ? "Deleting..." : confirmDeleteAll ? "Click Again to Confirm" : "Delete All"}
+            </Button>
+          </div>
         </div>
 
         <DataTable
