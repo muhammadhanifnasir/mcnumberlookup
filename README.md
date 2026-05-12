@@ -67,8 +67,11 @@ Indexes are included for pagination, filtering, and search.
 ## Scripts
 
 ```bash
+npm install
 npm run dev
 npm run lint
 npm run build
 npm run start
 ```
+
+`npm install` runs a `postinstall` step that downloads the Playwright Chromium browser used by the scraper.
