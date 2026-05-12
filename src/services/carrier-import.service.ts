@@ -107,7 +107,10 @@ export async function importCarriersSequentially(mcNumbers: string[]) {
         if (workerId < 0 || workerId >= pages.length) {
           throw new Error(`Worker ${workerId} is out of bounds for ${pages.length} pages`);
         }
-        const page = pages[workerId]!;
+        const page = pages[workerId];
+        if (!page) {
+          throw new Error(`Missing scraper page for worker ${workerId}`);
+        }
 
         try {
           return await processOneMcNumber(mcNumber, page);
