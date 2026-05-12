@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 type SearchBarProps = {
   value: string;
   placeholder?: string;
+  ariaLabel?: string;
   disabled?: boolean;
   onChange: (value: string) => void;
 };
@@ -15,6 +16,7 @@ type SearchBarProps = {
 export function SearchBar({
   value,
   placeholder = "Search carriers by MC, USDOT, or legal name...",
+  ariaLabel = "Search",
   disabled = false,
   onChange,
 }: SearchBarProps) {
@@ -27,14 +29,14 @@ export function SearchBar({
         placeholder={placeholder}
         disabled={disabled}
         className="pr-10 pl-9"
-        aria-label="Search carriers"
+        aria-label={ariaLabel}
       />
       {value ? (
         <Button
           type="button"
           variant="outline"
-          size="default"
           onClick={() => onChange("")}
+          aria-label="Clear search"
           className="absolute top-1/2 right-1.5 h-7 px-2 text-xs -translate-y-1/2"
         >
           <X className="h-3.5 w-3.5" />

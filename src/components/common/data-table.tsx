@@ -77,6 +77,7 @@ export function DataTable<TData>({
                             type="button"
                             className="inline-flex items-center gap-2"
                             onClick={header.column.getToggleSortingHandler()}
+                            aria-label={`Sort by ${String(header.column.columnDef.header ?? header.id)}`}
                           >
                             {flexRender(header.column.columnDef.header, header.getContext())}
                             <ArrowUpDown

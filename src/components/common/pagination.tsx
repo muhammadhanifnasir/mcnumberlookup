@@ -45,7 +45,7 @@ export function Pagination({
         <div className="w-24">
           <Select
             value={String(pageSize)}
-            onValueChange={(value) => onPageSizeChange(Number.parseInt(value, 10))}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
             disabled={disabled}
           >
             <SelectTrigger aria-label="Rows per page">

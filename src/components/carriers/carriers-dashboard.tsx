@@ -26,7 +26,7 @@ type CarrierListResponse = {
 
 export function CarriersDashboard() {
   const [records, setRecords] = useState<CarrierRecord[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");

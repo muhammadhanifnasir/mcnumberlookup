@@ -21,7 +21,8 @@ type StatusBadgeProps = {
 };
 
 export function StatusBadge({ status, kind = "import", className }: StatusBadgeProps) {
-  const normalized = status?.trim().toLowerCase().replaceAll(/\s+/g, "_");
+  const trimmedStatus = status?.trim();
+  const normalized = trimmedStatus ? trimmedStatus.toLowerCase().replaceAll(/\s+/g, "_") : undefined;
   const fallbackClass = "bg-slate-100 text-slate-700 border border-slate-300/40";
   const badgeClass =
     kind === "import"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { X } from "lucide-react";
 
 import { StatusBadge } from "@/components/carriers/status-badge";
@@ -21,19 +22,47 @@ type CarrierDetailsModalProps = {
 };
 
 export function CarrierDetailsModal({ carrier, onClose }: CarrierDetailsModalProps) {
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   if (!carrier) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="carrier-details-title"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-start justify-between border-b border-border p-5">
           <div>
-            <h3 className="text-lg font-semibold text-card-foreground">Carrier details</h3>
+            <h3 id="carrier-details-title" className="text-lg font-semibold text-card-foreground">
+              Carrier details
+            </h3>
             <p className="text-sm text-muted-foreground">MC {carrier.mcNumber}</p>
           </div>
-          <Button type="button" variant="outline" onClick={onClose} className="h-9 w-9 p-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className="h-9 w-9 p-0"
+            aria-label="Close dialog"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
