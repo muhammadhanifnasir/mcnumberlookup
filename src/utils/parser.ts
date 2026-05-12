@@ -28,3 +28,26 @@ export function extractNumber(raw: string | undefined): string | undefined {
   const match = raw.match(/\d[\d,]*/);
   return match ? match[0].replace(/,/g, "") : undefined;
 }
+
+const US_PHONE_PATTERN =
+  /(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?/i;
+
+export function extractPhoneNumber(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const match = raw.match(US_PHONE_PATTERN);
+  return match ? match[0].trim() : undefined;
+}
+
+export function extractPhone(text: string): string | undefined {
+  const labeledPhone =
+    extractTextField(text, "Telephone") ??
+    extractTextField(text, "Telephone Number") ??
+    extractTextField(text, "Phone");
+
+  const parsedPhone = extractPhoneNumber(labeledPhone);
+  if (parsedPhone) return parsedPhone;
+
+  if (!labeledPhone) return undefined;
+  const digits = labeledPhone.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 15 ? labeledPhone.trim() : undefined;
+}
