@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Eye, RefreshCcw, RotateCcw } from "lucide-react";
+import { Eye, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
 
 import { CarrierDetailsModal } from "@/components/carriers/carrier-details-modal";
 import { StatusBadge } from "@/components/carriers/status-badge";
@@ -35,6 +35,7 @@ export function CarriersDashboard() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [retryingMc, setRetryingMc] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierRecord | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
 
@@ -103,6 +104,31 @@ export function CarriersDashboard() {
       setError(retryError instanceof Error ? retryError.message : "Retry failed.");
     } finally {
       setRetryingMc(null);
+    }
+  }, [loadData]);
+
+  const deleteAllCarriers = useCallback(async () => {
+    if (!window.confirm("Delete all carrier records? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setDeletingAll(true);
+      setError(null);
+
+      const response = await fetch("/api/carriers?all=true", { method: "DELETE" });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete carriers.");
+      }
+
+      setSelectedCarrier(null);
+      setPage(1);
+      await loadData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete carriers.");
+    } finally {
+      setDeletingAll(false);
     }
   }, [loadData]);
 
@@ -210,10 +236,16 @@ export function CarriersDashboard() {
           <div className="w-full lg:max-w-md">
             <SearchBar value={searchInput} onChange={setSearchInput} disabled={loading} />
           </div>
-          <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+            <Button type="button" variant="outline" onClick={() => void deleteAllCarriers()} disabled={loading || deletingAll}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deletingAll ? "Deleting..." : "Delete All"}
+            </Button>
+          </div>
         </div>
 
         <DataTable

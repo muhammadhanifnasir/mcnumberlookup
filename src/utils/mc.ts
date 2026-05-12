@@ -1,4 +1,6 @@
 const MC_DIGIT_REGEX = /\d+/g;
+const MC_RANGE_REGEX = /^(?:MC[-\s]*)?(\d+)\s*(?:-|to)\s*(?:MC[-\s]*)?(\d+)$/i;
+const MAX_RANGE_SIZE = 5_000;
 
 export function normalizeMcNumber(input: string) {
   return input.replace(/^MC[-\s]*/i, "").trim();
@@ -9,6 +11,26 @@ export function parseMcNumbers(raw: string) {
   const unique = new Set<string>();
 
   for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const rangeMatch = trimmed.match(MC_RANGE_REGEX);
+    if (rangeMatch) {
+      const start = Number.parseInt(rangeMatch[1], 10);
+      const end = Number.parseInt(rangeMatch[2], 10);
+      const rangeSize = Math.abs(end - start) + 1;
+
+      if (Number.isFinite(start) && Number.isFinite(end) && rangeSize <= MAX_RANGE_SIZE) {
+        const step = start <= end ? 1 : -1;
+        for (let current = start; current !== end + step; current += step) {
+          unique.add(String(current));
+        }
+        continue;
+      }
+    }
+
     const cleaned = normalizeMcNumber(line);
     const matches = cleaned.match(MC_DIGIT_REGEX);
 
