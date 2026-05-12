@@ -11,6 +11,15 @@ export function extractTextField(text: string, label: string): string | undefine
   return value.length > 0 ? value : undefined;
 }
 
+export function extractFirstTextField(text: string, labels: string[]): string | undefined {
+  for (const label of labels) {
+    const value = extractTextField(text, label);
+    if (value) return value;
+  }
+
+  return undefined;
+}
+
 /**
  * Normalises a status string by collapsing whitespace.
  */
@@ -31,6 +40,8 @@ export function extractNumber(raw: string | undefined): string | undefined {
 
 const US_PHONE_PATTERN =
   /(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?/i;
+const EMAIL_PATTERN =
+  /\b[A-Z0-9](?:[A-Z0-9._%+-]{0,62}[A-Z0-9])?@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9-]{2,})+\b/i;
 
 export function extractPhoneNumber(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
@@ -50,4 +61,10 @@ export function extractPhone(text: string): string | undefined {
   if (!labeledPhone) return undefined;
   const digits = labeledPhone.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15 ? labeledPhone.trim() : undefined;
+}
+
+export function extractEmail(text: string): string | undefined {
+  const labeledEmail = extractFirstTextField(text, ["Email Address", "Email", "E-mail"]);
+  const email = labeledEmail?.match(EMAIL_PATTERN)?.[0] ?? text.match(EMAIL_PATTERN)?.[0];
+  return email?.trim();
 }

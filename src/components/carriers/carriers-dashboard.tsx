@@ -167,6 +167,30 @@ export function CarriersDashboard() {
         cell: ({ row }) => row.original.legalName ?? row.original.dbaName ?? "-",
       },
       {
+        accessorKey: "ownerStatus",
+        header: "Owner Status",
+        cell: ({ row }) => row.original.ownerStatus ?? "-",
+      },
+      {
+        accessorKey: "emailAddress",
+        header: "Email",
+        cell: ({ row }) => row.original.emailAddress ?? "-",
+      },
+      {
+        accessorKey: "physicalAddress",
+        header: "Physical Address",
+        cell: ({ row }) => (
+          <div className="max-w-xs whitespace-normal text-muted-foreground">
+            {row.original.physicalAddress ?? "-"}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "truckType",
+        header: "Truck Type",
+        cell: ({ row }) => row.original.truckType ?? "-",
+      },
+      {
         accessorKey: "phone",
         header: "Phone",
         cell: ({ row }) => row.original.phone ?? "-",
@@ -293,9 +317,13 @@ export function CarriersDashboard() {
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <div>USDOT: {row.usdotNumber ?? "-"}</div>
+                <div>Owner: {row.ownerStatus ?? "-"}</div>
+                <div>Email: {row.emailAddress ?? "-"}</div>
                 <div>Phone: {row.phone ?? "-"}</div>
+                <div>Truck Type: {row.truckType ?? "-"}</div>
                 <div>Power Units: {row.powerUnits ?? "-"}</div>
                 <div>Drivers: {row.drivers ?? "-"}</div>
+                <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <StatusBadge status={row.usdotStatus} kind="usdot" />

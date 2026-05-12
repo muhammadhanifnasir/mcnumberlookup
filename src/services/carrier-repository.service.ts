@@ -7,6 +7,16 @@ import { buildSaferUrl } from "@/services/safer-scraper.service";
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
+const CARRIER_SEARCH_FIELDS = [
+  "mc_number",
+  "usdot_number",
+  "legal_name",
+  "dba_name",
+  "owner_status",
+  "email_address",
+  "physical_address",
+  "truck_type",
+] as const;
 
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
 export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
@@ -40,14 +50,18 @@ export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertP
   return {
     mc_number: record.mcNumber,
     usdot_status: record.usdotStatus ?? null,
+    owner_status: record.ownerStatus ?? null,
     usdot_number: record.usdotNumber ?? null,
     mcs150_form_date: record.mcs150FormDate ?? null,
     operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
     dba_name: record.dbaName ?? null,
+    email_address: record.emailAddress ?? null,
     phone: record.phone ?? null,
     power_units: parseOptionalInteger(record.powerUnits),
     drivers: parseOptionalInteger(record.drivers),
+    physical_address: record.physicalAddress ?? null,
+    truck_type: record.truckType ?? null,
     import_status: record.importStatus,
     created_at: record.scrapedAt,
   };
@@ -57,6 +71,7 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   const payload: CarrierUpdatePayload = {};
 
   if (record.usdotStatus !== undefined) payload.usdot_status = record.usdotStatus ?? null;
+  if (record.ownerStatus !== undefined) payload.owner_status = record.ownerStatus ?? null;
   if (record.usdotNumber !== undefined) payload.usdot_number = record.usdotNumber ?? null;
   if (record.mcs150FormDate !== undefined) payload.mcs150_form_date = record.mcs150FormDate ?? null;
   if (record.operatingAuthorityStatus !== undefined) {
@@ -64,9 +79,12 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   }
   if (record.legalName !== undefined) payload.legal_name = record.legalName ?? null;
   if (record.dbaName !== undefined) payload.dba_name = record.dbaName ?? null;
+  if (record.emailAddress !== undefined) payload.email_address = record.emailAddress ?? null;
   if (record.phone !== undefined) payload.phone = record.phone ?? null;
   if (record.powerUnits !== undefined) payload.power_units = parseOptionalInteger(record.powerUnits);
   if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
+  if (record.physicalAddress !== undefined) payload.physical_address = record.physicalAddress ?? null;
+  if (record.truckType !== undefined) payload.truck_type = record.truckType ?? null;
   if (record.importStatus !== undefined) payload.import_status = record.importStatus;
 
   return payload;
@@ -77,14 +95,18 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     id: row.id,
     mcNumber: row.mc_number,
     usdotStatus: row.usdot_status ?? undefined,
+    ownerStatus: row.owner_status ?? undefined,
     usdotNumber: row.usdot_number ?? undefined,
     mcs150FormDate: row.mcs150_form_date ?? undefined,
     operatingAuthorityStatus: row.operating_authority_status ?? undefined,
     legalName: row.legal_name ?? undefined,
     dbaName: row.dba_name ?? undefined,
+    emailAddress: row.email_address ?? undefined,
     phone: row.phone ?? undefined,
     powerUnits: row.power_units !== null ? String(row.power_units) : undefined,
     drivers: row.drivers !== null ? String(row.drivers) : undefined,
+    physicalAddress: row.physical_address ?? undefined,
+    truckType: row.truck_type ?? undefined,
     importStatus: row.import_status,
     sourceUrl: buildSaferUrl(row.mc_number),
     scrapedAt: row.created_at,
@@ -186,9 +208,8 @@ export async function listCarrierRecordsPaginated(
   if (options.search) {
     const safeSearch = options.search.replace(/[^a-zA-Z0-9\s-]/g, "").trim();
     if (safeSearch) {
-      query = query.or(
-        `mc_number.ilike.%${safeSearch}%,usdot_number.ilike.%${safeSearch}%,legal_name.ilike.%${safeSearch}%,dba_name.ilike.%${safeSearch}%`,
-      );
+      const searchFilters = CARRIER_SEARCH_FIELDS.map((field) => `${field}.ilike.%${safeSearch}%`);
+      query = query.or(searchFilters.join(","));
     }
   }
 
