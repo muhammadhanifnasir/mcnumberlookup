@@ -44,5 +44,10 @@ export function extractPhone(text: string): string | undefined {
     extractTextField(text, "Telephone Number") ??
     extractTextField(text, "Phone");
 
-  return extractPhoneNumber(labeledPhone) ?? labeledPhone;
+  const parsedPhone = extractPhoneNumber(labeledPhone);
+  if (parsedPhone) return parsedPhone;
+
+  if (!labeledPhone) return undefined;
+  const digits = labeledPhone.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 15 ? labeledPhone.trim() : undefined;
 }
