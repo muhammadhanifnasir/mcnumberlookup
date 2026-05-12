@@ -52,3 +52,54 @@ export async function processSequentialQueue<T, R>(
 
   return results;
 }
+
+/**
+ * Processes items with bounded concurrency while preserving one result entry per input.
+ */
+export async function processConcurrentQueue<T, R>(
+  items: T[],
+  processor: (item: T, index: number, total: number, workerId: number) => Promise<R>,
+  concurrency: number,
+): Promise<QueueResult<T, R>[]> {
+  const total = items.length;
+  if (total === 0) return [];
+
+  const workerCount = Math.max(1, Math.min(concurrency, total));
+  const results = new Array<QueueResult<T, R>>(total);
+  const pending = items.map((item, index) => ({ item, index }));
+
+  logger.info("Starting concurrent queue", { total, concurrency: workerCount });
+
+  async function runWorker(workerId: number) {
+    while (true) {
+      const nextTask = pending.shift();
+      if (!nextTask) return;
+
+      const { item, index } = nextTask;
+
+      logger.info(`Worker ${workerId + 1} processing item ${index + 1}/${total}`, {
+        item: String(item),
+      });
+
+      try {
+        const result = await processor(item, index, total, workerId);
+        results[index] = { input: item, result, success: true };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        results[index] = { input: item, error: message, success: false };
+        logger.error(`Worker ${workerId + 1} failed item ${index + 1}/${total}`, {
+          item: String(item),
+          error: message,
+        });
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, (_, workerId) => runWorker(workerId)));
+
+  const succeeded = results.filter((r) => r?.success).length;
+  const failed = results.filter((r) => !r?.success).length;
+  logger.info("Concurrent queue completed", { total, succeeded, failed });
+
+  return results;
+}
