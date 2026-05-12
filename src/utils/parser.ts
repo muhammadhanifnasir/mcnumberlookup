@@ -29,11 +29,12 @@ export function extractNumber(raw: string | undefined): string | undefined {
   return match ? match[0].replace(/,/g, "") : undefined;
 }
 
-function extractPhoneNumber(raw: string | undefined): string | undefined {
+const US_PHONE_PATTERN =
+  /(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?/i;
+
+export function extractPhoneNumber(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
-  const match = raw.match(
-    /(?:\+?1[\s.-]*)?(?:\(?\d{3}\)?[\s.-]*)\d{3}[\s.-]*\d{4}(?:\s*(?:x|ext\.?)\s*\d+)?/i,
-  );
+  const match = raw.match(US_PHONE_PATTERN);
   return match ? match[0].trim() : undefined;
 }
 
