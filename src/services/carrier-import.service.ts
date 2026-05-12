@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Page } from "playwright-core";
 
 import type { CarrierRecord } from "@/types/carrier";
 import { upsertCarrierForImport } from "@/services/carrier-write.service";

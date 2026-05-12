@@ -1,4 +1,5 @@
-import { chromium, type Browser, type Page } from "playwright";
+import chromiumBinary from "@sparticuz/chromium";
+import { chromium, type Browser, type Page } from "playwright-core";
 
 import type { ScrapedCarrierData } from "@/types/carrier";
 import { logger } from "@/utils/logger";
@@ -21,7 +22,12 @@ export function buildSaferUrl(mcNumber: string) {
 
 export async function createSaferScraperSession() {
   logger.info("Launching Playwright browser");
-  const browser = await chromium.launch({ headless: true });
+  const executablePath = await chromiumBinary.executablePath();
+  const browser = await chromium.launch({
+    args: chromiumBinary.args,
+    executablePath,
+    headless: true,
+  });
   const page = await browser.newPage();
   return { browser, page };
 }
@@ -98,7 +104,12 @@ export async function scrapeCarrierByMcWithPage(
 
 /** Standalone scrape that creates and closes its own browser session. */
 export async function scrapeCarrierByMc(mcNumber: string): Promise<ScrapedCarrierData | null> {
-  const browser = await chromium.launch({ headless: true });
+  const executablePath = await chromiumBinary.executablePath();
+  const browser = await chromium.launch({
+    args: chromiumBinary.args,
+    executablePath,
+    headless: true,
+  });
   const page = await browser.newPage();
 
   try {
