@@ -83,7 +83,11 @@ export async function scrapeCarrierByMcWithPage(
     normalizedInnerText.length >= normalizedTextContent.length
       ? normalizedInnerText
       : normalizedTextContent;
-  const mailtoHref = await page.locator('a[href^="mailto:"]').first().getAttribute("href");
+  const mailtoHref = await page
+    .locator('a[href^="mailto:"]')
+    .first()
+    .getAttribute("href")
+    .catch(() => null);
   const emailAddress = extractEmail(bodyText) ?? extractEmailFromMailtoHref(mailtoHref);
 
   if (/no records matching your query were found/i.test(bodyText)) {
