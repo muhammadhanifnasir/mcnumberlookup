@@ -23,9 +23,14 @@ export function parseMcNumbers(raw: string) {
       const rangeSize = Math.abs(end - start) + 1;
 
       if (Number.isFinite(start) && Number.isFinite(end) && rangeSize <= MAX_RANGE_SIZE) {
-        const step = start <= end ? 1 : -1;
-        for (let current = start; current !== end + step; current += step) {
-          unique.add(String(current));
+        if (start <= end) {
+          for (let current = start; current <= end; current += 1) {
+            unique.add(String(current));
+          }
+        } else {
+          for (let current = start; current >= end; current -= 1) {
+            unique.add(String(current));
+          }
         }
         continue;
       }

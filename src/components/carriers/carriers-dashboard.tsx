@@ -24,6 +24,8 @@ type CarrierListResponse = {
   error?: string;
 };
 
+const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
+
 export function CarriersDashboard() {
   const [records, setRecords] = useState<CarrierRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ export function CarriersDashboard() {
 
     const timeout = window.setTimeout(() => {
       setConfirmDeleteAll(false);
-    }, 5_000);
+    }, CONFIRM_DELETE_TIMEOUT_MS);
 
     return () => window.clearTimeout(timeout);
   }, [confirmDeleteAll]);
@@ -256,7 +258,13 @@ export function CarriersDashboard() {
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
-            <Button type="button" variant="outline" onClick={() => void deleteAllCarriers()} disabled={loading || deletingAll}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void deleteAllCarriers()}
+              disabled={loading || deletingAll}
+              aria-label={confirmDeleteAll ? "Click again to confirm deletion of all carriers" : "Delete all carriers"}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               {deletingAll ? "Deleting..." : confirmDeleteAll ? "Click Again to Confirm" : "Delete All"}
             </Button>
