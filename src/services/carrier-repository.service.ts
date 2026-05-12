@@ -7,6 +7,16 @@ import { buildSaferUrl } from "@/services/safer-scraper.service";
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
+const CARRIER_SEARCH_FIELDS = [
+  "mc_number",
+  "usdot_number",
+  "legal_name",
+  "dba_name",
+  "owner_status",
+  "email_address",
+  "physical_address",
+  "truck_type",
+] as const;
 
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
 export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
@@ -198,9 +208,8 @@ export async function listCarrierRecordsPaginated(
   if (options.search) {
     const safeSearch = options.search.replace(/[^a-zA-Z0-9\s-]/g, "").trim();
     if (safeSearch) {
-      query = query.or(
-        `mc_number.ilike.%${safeSearch}%,usdot_number.ilike.%${safeSearch}%,legal_name.ilike.%${safeSearch}%,dba_name.ilike.%${safeSearch}%,owner_status.ilike.%${safeSearch}%,email_address.ilike.%${safeSearch}%,physical_address.ilike.%${safeSearch}%,truck_type.ilike.%${safeSearch}%`,
-      );
+      const searchFilters = CARRIER_SEARCH_FIELDS.map((field) => `${field}.ilike.%${safeSearch}%`);
+      query = query.or(searchFilters.join(","));
     }
   }
 
