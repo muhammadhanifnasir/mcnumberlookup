@@ -5,6 +5,7 @@ import type { ScrapedCarrierData } from "@/types/carrier";
 import { logger } from "@/utils/logger";
 import {
   extractEmail,
+  extractEmailFromMailtoHref,
   extractFirstTextField,
   extractNumber,
   extractPhone,
@@ -70,6 +71,8 @@ export async function scrapeCarrierByMcWithPage(
     });
 
   const bodyText = await page.locator("body").innerText();
+  const mailtoHref = await page.locator('a[href^="mailto:"]').first().getAttribute("href");
+  const emailAddress = extractEmail(bodyText) ?? extractEmailFromMailtoHref(mailtoHref);
 
   if (/no records matching your query were found/i.test(bodyText)) {
     logger.info("Carrier not found in SAFER", { mcNumber });
@@ -91,7 +94,7 @@ export async function scrapeCarrierByMcWithPage(
     ),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
-    emailAddress: extractEmail(bodyText),
+    emailAddress,
     phone: extractPhone(bodyText),
     powerUnits: extractNumber(extractTextField(bodyText, "Power Units")),
     drivers: extractNumber(extractTextField(bodyText, "Drivers")),
