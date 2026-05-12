@@ -36,6 +36,7 @@ export function CarriersDashboard() {
   const [totalPages, setTotalPages] = useState(0);
   const [retryingMc, setRetryingMc] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierRecord | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
 
@@ -87,6 +88,18 @@ export function CarriersDashboard() {
     void loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!confirmDeleteAll) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setConfirmDeleteAll(false);
+    }, 5_000);
+
+    return () => window.clearTimeout(timeout);
+  }, [confirmDeleteAll]);
+
   const retryImport = useCallback(async (mcNumber: string) => {
     try {
       setRetryingMc(mcNumber);
@@ -108,13 +121,15 @@ export function CarriersDashboard() {
   }, [loadData]);
 
   const deleteAllCarriers = useCallback(async () => {
-    if (!window.confirm("Delete all carrier records? This action cannot be undone.")) {
+    if (!confirmDeleteAll) {
+      setConfirmDeleteAll(true);
       return;
     }
 
     try {
       setDeletingAll(true);
       setError(null);
+      setConfirmDeleteAll(false);
 
       const response = await fetch("/api/carriers?all=true", { method: "DELETE" });
       const payload = (await response.json()) as { error?: string };
@@ -130,7 +145,7 @@ export function CarriersDashboard() {
     } finally {
       setDeletingAll(false);
     }
-  }, [loadData]);
+  }, [confirmDeleteAll, loadData]);
 
   const columns = useMemo<ColumnDef<CarrierRecord>[]>(
     () => [
@@ -243,7 +258,7 @@ export function CarriersDashboard() {
             </Button>
             <Button type="button" variant="outline" onClick={() => void deleteAllCarriers()} disabled={loading || deletingAll}>
               <Trash2 className="mr-2 h-4 w-4" />
-              {deletingAll ? "Deleting..." : "Delete All"}
+              {deletingAll ? "Deleting..." : confirmDeleteAll ? "Click Again to Confirm" : "Delete All"}
             </Button>
           </div>
         </div>
