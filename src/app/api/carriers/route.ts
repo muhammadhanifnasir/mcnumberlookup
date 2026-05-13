@@ -29,10 +29,18 @@ export async function GET(request: Request) {
       usdotStatus,
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      success: true,
+      data: result,
+    });
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load carriers." },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown server error",
+      },
       { status: 500 },
     );
   }
@@ -46,26 +54,46 @@ export async function DELETE(request: Request) {
 
     if (deleteAll) {
       const deleted = await deleteAllCarrierRecords();
-      return NextResponse.json({ deleted });
+      return NextResponse.json({
+        success: true,
+        data: { deleted },
+      });
     }
 
     if (!mcParam) {
       return NextResponse.json(
-        { error: "Provide mcNumber or set all=true to delete carrier records." },
+        {
+          success: false,
+          error: "Provide mcNumber or set all=true to delete carrier records.",
+        },
         { status: 400 },
       );
     }
 
     const [mcNumber] = parseMcNumbers(mcParam);
     if (!mcNumber) {
-      return NextResponse.json({ error: "A valid MC number is required." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "A valid MC number is required.",
+        },
+        { status: 400 },
+      );
     }
 
     const deleted = await deleteCarrierRecordByMcNumber(mcNumber);
-    return NextResponse.json({ deleted, mcNumber });
+    return NextResponse.json({
+      success: true,
+      data: { deleted, mcNumber },
+    });
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete carriers." },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown server error",
+      },
       { status: 500 },
     );
   }

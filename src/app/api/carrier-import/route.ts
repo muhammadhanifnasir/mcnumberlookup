@@ -25,21 +25,35 @@ export async function POST(request: Request) {
     const mcNumbers = Array.from(new Set([...parsedFromInput, ...parsedFromArray]));
 
     if (mcNumbers.length === 0) {
-      return NextResponse.json({ error: "At least one valid MC number is required." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "At least one valid MC number is required.",
+        },
+        { status: 400 },
+      );
     }
 
     const results = await importCarriersSequentially(mcNumbers);
 
     return NextResponse.json({
-      processed: mcNumbers.length,
-      imported: results.filter((item) => item.importStatus === "imported").length,
-      failed: results.filter((item) => item.importStatus === "failed").length,
-      notFound: results.filter((item) => item.importStatus === "not_found").length,
-      results,
+      success: true,
+      data: {
+        processed: mcNumbers.length,
+        imported: results.filter((item) => item.importStatus === "imported").length,
+        failed: results.filter((item) => item.importStatus === "failed").length,
+        notFound: results.filter((item) => item.importStatus === "not_found").length,
+        results,
+      },
     });
   } catch (error) {
+    console.error(error);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to import carriers." },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown server error",
+      },
       { status: 500 },
     );
   }

@@ -11,17 +11,17 @@ import { Pagination } from "@/components/common/pagination";
 import { SearchBar } from "@/components/common/search-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
 
 type CarrierListResponse = {
-  data?: CarrierRecord[];
-  pagination?: {
+  data: CarrierRecord[];
+  pagination: {
     page: number;
     pageSize: number;
     total: number;
     totalPages: number;
   };
-  error?: string;
 };
 
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
@@ -66,15 +66,11 @@ export function CarriersDashboard() {
         method: "GET",
         cache: "no-store",
       });
-      const payload = (await response.json()) as CarrierListResponse;
+      const payload = await readApiResponse<CarrierListResponse>(response);
 
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to load carriers.");
-      }
-
-      setRecords(payload.data ?? []);
-      setTotal(payload.pagination?.total ?? 0);
-      setTotalPages(payload.pagination?.totalPages ?? 0);
+      setRecords(payload.data);
+      setTotal(payload.pagination.total);
+      setTotalPages(payload.pagination.totalPages);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Failed to load carriers.");
       setRecords([]);
@@ -118,10 +114,7 @@ export function CarriersDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mcNumbers: [mcNumber] }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? `Failed to retry MC ${mcNumber}.`);
-      }
+      await readApiResponse(response);
       await loadData();
     } catch (retryError) {
       setError(retryError instanceof Error ? retryError.message : "Retry failed.");
@@ -142,10 +135,7 @@ export function CarriersDashboard() {
       setConfirmDeleteAll(false);
 
       const response = await fetch("/api/carriers?all=true", { method: "DELETE" });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to delete carriers.");
-      }
+      await readApiResponse(response);
 
       setSelectedCarrier(null);
       setPage(1);

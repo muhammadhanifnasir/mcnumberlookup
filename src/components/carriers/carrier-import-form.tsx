@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingState } from "@/components/common/loading-state";
 import { CarriersTable } from "@/components/carriers/carriers-table";
+import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
 import { parseMcNumbers } from "@/utils/mc";
 import { cn } from "@/lib/utils";
@@ -42,13 +43,8 @@ export function CarrierImportForm() {
         body: JSON.stringify({ mcInput }),
       });
 
-      const payload = (await response.json()) as Partial<ImportResponse> & { error?: string };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Import failed.");
-      }
-
-      setSummary(payload as ImportResponse);
+      const payload = await readApiResponse<ImportResponse>(response);
+      setSummary(payload);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Import failed.");
     } finally {
