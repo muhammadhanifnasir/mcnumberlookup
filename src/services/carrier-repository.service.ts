@@ -25,6 +25,33 @@ const CARRIER_SEARCH_FIELDS = [
   "inferred_truck_type",
   "enrichment_status",
 ] as const;
+const FLEET_SIZE_CATEGORIES = [
+  "Owner Operator",
+  "Small Fleet",
+  "Medium Fleet",
+  "Enterprise Fleet",
+] as const;
+const INFERRED_TRUCK_TYPES = [
+  "Dry Van",
+  "Reefer",
+  "Flatbed",
+  "Hotshot",
+  "Box Truck",
+  "Car Hauler",
+  "Tanker",
+  "Hazmat",
+  "Power Only",
+] as const;
+
+function toFleetSizeCategory(value: string | null | undefined) {
+  if (!value) return undefined;
+  return FLEET_SIZE_CATEGORIES.find((category) => category === value);
+}
+
+function toInferredTruckType(value: string | null | undefined) {
+  if (!value) return undefined;
+  return INFERRED_TRUCK_TYPES.find((truckType) => truckType === value);
+}
 
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
 export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
@@ -145,8 +172,8 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     operationClassification: row.operation_classification ?? undefined,
     carrierOperation: row.carrier_operation ?? undefined,
     authorityInformation: row.authority_information ?? undefined,
-    fleetSizeCategory: row.fleet_size_category ?? undefined,
-    inferredTruckType: row.inferred_truck_type ?? undefined,
+    fleetSizeCategory: toFleetSizeCategory(row.fleet_size_category),
+    inferredTruckType: toInferredTruckType(row.inferred_truck_type),
     dataSource: row.data_source ?? undefined,
     enrichmentStatus: row.enrichment_status ?? undefined,
     importStatus: row.import_status,
