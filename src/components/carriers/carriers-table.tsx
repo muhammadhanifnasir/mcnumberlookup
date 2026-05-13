@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState } from "react";
 
@@ -32,7 +32,7 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
         <div className="inline-flex items-center rounded-lg border border-border p-1">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             className={cn("h-8 px-3 text-xs", viewMode === "table" ? "bg-muted text-card-foreground" : "")}
             onClick={() => setViewMode("table")}
           >
@@ -40,7 +40,7 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             className={cn("h-8 px-3 text-xs", viewMode === "cards" ? "bg-muted text-card-foreground" : "")}
             onClick={() => setViewMode("cards")}
           >

@@ -33,18 +33,31 @@ const CSV_COLUMNS: { header: string; value: (carrier: CarrierRecord) => string }
   { header: "Scraped At", value: (carrier) => carrier.scrapedAt },
 ];
 
-function escapeCsv(value: string) {
+function escapeCsvValue(value: string) {
   if (/[",\n]/.test(value)) {
     return `"${value.replaceAll('"', '""')}"`;
   }
   return value;
 }
 
-function toCsv(rows: CarrierRecord[]) {
-  const header = CSV_COLUMNS.map((column) => escapeCsv(column.header)).join(",");
-  const lines = rows.map((row) => CSV_COLUMNS.map((column) => escapeCsv(column.value(row))).join(","));
+function generateCarrierCsv(rows: CarrierRecord[]) {
+  const header = CSV_COLUMNS.map((column) => escapeCsvValue(column.header)).join(",");
+  const lines = rows.map((row) =>
+    CSV_COLUMNS.map((column) => escapeCsvValue(column.value(row))).join(","),
+  );
 
   return `${header}\n${lines.join("\n")}`;
+}
+
+function formatTimestampForFilename(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
 }
 
 export function CarrierImportForm() {
@@ -61,17 +74,17 @@ export function CarrierImportForm() {
       return;
     }
 
-    const csvContent = toCsv(summary.results);
+    const csvContent = generateCarrierCsv(summary.results);
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const timestamp = new Date().toISOString().replaceAll(":", "-");
+    const timestamp = formatTimestampForFilename(new Date());
 
     link.href = url;
     link.setAttribute("download", `carrier-import-results-${timestamp}.csv`);
-    document.body.append(link);
+    document.body.appendChild(link);
     link.click();
-    link.remove();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
 
