@@ -15,8 +15,8 @@ import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
 
 type CarrierListResponse = {
-  data: CarrierRecord[];
-  pagination: {
+  data?: CarrierRecord[];
+  pagination?: {
     page: number;
     pageSize: number;
     total: number;
@@ -68,9 +68,9 @@ export function CarriersDashboard() {
       });
       const payload = await readApiResponse<CarrierListResponse>(response);
 
-      setRecords(payload.data);
-      setTotal(payload.pagination.total);
-      setTotalPages(payload.pagination.totalPages);
+      setRecords(payload.data ?? []);
+      setTotal(payload.pagination?.total ?? 0);
+      setTotalPages(payload.pagination?.totalPages ?? 0);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Failed to load carriers.");
       setRecords([]);
@@ -363,11 +363,11 @@ export function CarriersDashboard() {
                   <div>Equipment: {row.equipmentType ?? row.truckType ?? "-"}</div>
                   <div>Fleet: {row.fleetSizeCategory ?? "-"}</div>
                   <div>Inferred Type: {row.inferredTruckType ?? "-"}</div>
-                   <div>Power Units: {row.powerUnits ?? "-"}</div>
-                   <div>Drivers: {row.drivers ?? "-"}</div>
-                   <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
-                   <div className="col-span-2">Error: {row.importError ?? "-"}</div>
-                 </div>
+                  <div>Power Units: {row.powerUnits ?? "-"}</div>
+                  <div>Drivers: {row.drivers ?? "-"}</div>
+                  <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
+                  <div className="col-span-2">Error: {row.importError ?? "-"}</div>
+                </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={row.usdotStatus} kind="usdot" />
