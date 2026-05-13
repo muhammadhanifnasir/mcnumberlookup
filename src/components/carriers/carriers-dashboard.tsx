@@ -256,6 +256,15 @@ export function CarriersDashboard() {
         cell: ({ row }) => <StatusBadge status={row.original.enrichmentStatus} kind="enrichment" />,
       },
       {
+        accessorKey: "importError",
+        header: "Error",
+        cell: ({ row }) => (
+          <div className="max-w-xs whitespace-normal text-xs text-muted-foreground">
+            {row.original.importError ?? "-"}
+          </div>
+        ),
+      },
+      {
         id: "createdAt",
         accessorFn: (row) => new Date(row.scrapedAt).getTime(),
         header: "Created At",
@@ -364,10 +373,11 @@ export function CarriersDashboard() {
                   <div>Equipment: {row.equipmentType ?? row.truckType ?? "-"}</div>
                   <div>Fleet: {row.fleetSizeCategory ?? "-"}</div>
                   <div>Inferred Type: {row.inferredTruckType ?? "-"}</div>
-                  <div>Power Units: {row.powerUnits ?? "-"}</div>
-                  <div>Drivers: {row.drivers ?? "-"}</div>
-                  <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
-                </div>
+                   <div>Power Units: {row.powerUnits ?? "-"}</div>
+                   <div>Drivers: {row.drivers ?? "-"}</div>
+                   <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
+                   <div className="col-span-2">Error: {row.importError ?? "-"}</div>
+                 </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={row.usdotStatus} kind="usdot" />

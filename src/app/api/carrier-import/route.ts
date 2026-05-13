@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { assertSupabaseConfiguration } from "@/lib/supabase/env";
 import { importCarriersSequentially } from "@/services/carrier-import.service";
 import { parseMcNumbers } from "@/utils/mc";
 
@@ -13,6 +14,8 @@ type ImportPayload = {
 
 export async function POST(request: Request) {
   try {
+    assertSupabaseConfiguration();
+
     const payload = (await request.json()) as ImportPayload;
     const parsedFromInput = payload.mcInput ? parseMcNumbers(payload.mcInput) : [];
     const parsedFromArray = payload.mcNumbers

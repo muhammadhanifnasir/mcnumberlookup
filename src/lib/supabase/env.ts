@@ -23,3 +23,8 @@ export function getSupabaseServiceRoleOrAnonKey() {
   }
   return value;
 }
+
+export function assertSupabaseConfiguration() {
+  getSupabaseUrl();
+  getSupabaseServiceRoleOrAnonKey();
+}
