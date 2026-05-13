@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import { assertSupabaseConfiguration } from "@/lib/supabase/env";
 import { importCarriersSequentially } from "@/services/carrier-import.service";
-import { logger } from "@/utils/logger";
 import { parseMcNumbers } from "@/utils/mc";
 
 export const runtime = "nodejs";
@@ -42,8 +41,6 @@ export async function POST(request: Request) {
       );
     }
 
-    logger.info("/api/import-carriers request received", { count: mcNumbers.length });
-
     const results = await importCarriersSequentially(mcNumbers);
 
     return NextResponse.json({
@@ -57,9 +54,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    logger.error("/api/import-carriers unhandled error", {
-      error: error instanceof Error ? error.message : String(error),
-    });
     console.error(error);
     return NextResponse.json(
       {

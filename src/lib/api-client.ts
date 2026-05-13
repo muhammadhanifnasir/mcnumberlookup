@@ -4,7 +4,7 @@ type ApiEnvelope<T> = {
   error?: string;
 };
 
-function parseJsonLike<T>(raw: string): T | null {
+function tryParseJson<T>(raw: string): T | null {
   if (!raw.trim()) return null;
 
   try {
@@ -16,7 +16,7 @@ function parseJsonLike<T>(raw: string): T | null {
 
 export async function readApiResponse<T>(response: Response): Promise<T> {
   const raw = await response.text();
-  const parsed = parseJsonLike<ApiEnvelope<T>>(raw);
+  const parsed = tryParseJson<ApiEnvelope<T>>(raw);
 
   if (!response.ok) {
     const message =
