@@ -6,6 +6,7 @@ import { logger } from "@/utils/logger";
 import {
   extractEmail,
   extractEmailFromMailtoHref,
+  extractFirstTextField,
   extractNumber,
   extractPhone,
   extractTextField,
@@ -98,7 +99,7 @@ export async function scrapeCarrierByMcWithPage(
     usdotStatus: normalizeStatus(
       extractTextField(bodyText, "USDOT Status") ?? extractTextField(bodyText, "Operating Status"),
     ),
-    ownerStatus: normalizeStatus(extractTextField(bodyText, "Owner Status")),
+    ownerStatus: normalizeStatus(extractFirstTextField(bodyText, ["Owner Status", "Entity Type"])),
     usdotNumber: extractTextField(bodyText, "USDOT Number"),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
