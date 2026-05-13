@@ -1,38 +1,25 @@
-export type CarrierImportStatus = "imported" | "not_found" | "failed";
-export type EnrichmentStatus = "pending" | "enriched" | "partial" | "failed";
-export type FleetSizeCategory =
-  | "Owner Operator"
-  | "Small Fleet"
-  | "Medium Fleet"
-  | "Enterprise Fleet";
-export type InferredTruckType =
-  | "Dry Van"
-  | "Reefer"
-  | "Flatbed"
-  | "Hotshot"
-  | "Box Truck"
-  | "Car Hauler"
-  | "Tanker"
-  | "Hazmat"
-  | "Power Only";
-export type EquipmentType = InferredTruckType | "Other";
-export type CarrierOperationType =
-  | "Interstate"
-  | "Intrastate Hazmat"
-  | "Intrastate Non-Hazmat"
-  | "Private"
-  | "For Hire"
-  | "Exempt For Hire"
-  | "Other";
-export type OperationClassificationType =
-  | "Authorized For Hire"
-  | "Exempt For Hire"
-  | "Private(Property)"
-  | "Private(Passengers)"
-  | "Private(HM)"
-  | "Migrant"
-  | "U.S. Mail"
-  | "Other";
+// All domain union types are derived from `as const` arrays in type-guards.ts.
+// Imported here for use in the DTOs below, and re-exported to keep the
+// public API of this module stable.
+import type {
+  CarrierImportStatus,
+  CarrierOperationType,
+  EnrichmentStatus,
+  EquipmentType,
+  FleetSizeCategory,
+  InferredTruckType,
+  OperationClassificationType,
+} from "@/utils/type-guards";
+
+export type {
+  CarrierImportStatus,
+  CarrierOperationType,
+  EnrichmentStatus,
+  EquipmentType,
+  FleetSizeCategory,
+  InferredTruckType,
+  OperationClassificationType,
+};
 
 export type ScrapedCarrierData = {
   mcNumber: string;
