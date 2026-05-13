@@ -6,6 +6,7 @@ import {
   listCarrierRecordsPaginated,
 } from "@/services/carrier-repository.service";
 import { parseMcNumbers } from "@/utils/mc";
+import { mapImportStatus } from "@/utils/carrier-type-mappers";
 
 export const runtime = "nodejs";
 
@@ -24,10 +25,7 @@ export async function GET(request: Request) {
       page: Number.isFinite(page) ? page : 1,
       pageSize: Number.isFinite(pageSize) ? pageSize : 50,
       search,
-      importStatus:
-        importStatus === "imported" || importStatus === "not_found" || importStatus === "failed"
-          ? importStatus
-          : undefined,
+      importStatus: mapImportStatus(importStatus),
       usdotStatus,
     });
 

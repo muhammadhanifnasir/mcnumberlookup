@@ -9,12 +9,13 @@ Dedicated production-oriented FMCSA SAFER MC carrier importer built with:
 - Supabase
 - Playwright
 
-## MVP scope
+## Platform scope
 
-- MC import textarea
 - Sequential FMCSA SAFER scraping by MC number
-- Supabase persistence
-- Carrier results dashboard table
+- Carrier enrichment (website, email, operational metadata)
+- Equipment/truck inference and fleet-size classification
+- Supabase persistence of enriched lead-intelligence fields
+- Carrier dashboard with enrichment/status badges
 
 ## Routes
 
@@ -46,6 +47,7 @@ Run the migrations in:
 
 - `supabase/migrations/20260511153000_create_carriers.sql`
 - `supabase/migrations/20260512130000_add_carrier_extraction_fields.sql`
+- `supabase/migrations/20260513023000_add_carrier_enrichment_platform_fields.sql`
 
 It creates `public.carriers` with:
 
@@ -64,6 +66,16 @@ It creates `public.carriers` with:
 - `drivers` (integer)
 - `physical_address` (text)
 - `truck_type` (text)
+- `website` (text)
+- `equipment_type` (text)
+- `cargo_carried` (text)
+- `operation_classification` (text)
+- `carrier_operation` (text)
+- `authority_information` (text)
+- `fleet_size_category` (text)
+- `inferred_truck_type` (text)
+- `data_source` (text)
+- `enrichment_status` (`pending | enriched | partial | failed`)
 - `import_status` (`imported | not_found | failed`)
 - `created_at` / `updated_at` (timestamptz)
 

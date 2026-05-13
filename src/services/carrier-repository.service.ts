@@ -3,6 +3,15 @@ import type { CarrierRecord } from "@/types/carrier";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { buildSaferUrl } from "@/services/safer-scraper.service";
+import {
+  mapCarrierOperationType,
+  mapEnrichmentStatus,
+  mapEquipmentType,
+  mapFleetSizeCategory,
+  mapImportStatus,
+  mapInferredTruckType,
+  mapOperationClassificationType,
+} from "@/utils/carrier-type-mappers";
 
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
@@ -14,10 +23,17 @@ const CARRIER_SEARCH_FIELDS = [
   "dba_name",
   "owner_status",
   "email_address",
+  "website",
   "physical_address",
   "truck_type",
+  "equipment_type",
+  "cargo_carried",
+  "operation_classification",
+  "carrier_operation",
+  "fleet_size_category",
+  "inferred_truck_type",
+  "enrichment_status",
 ] as const;
-
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
 export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
 export type CarrierUpdatePayload = Database["public"]["Tables"]["carriers"]["Update"];
@@ -62,6 +78,16 @@ export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertP
     drivers: parseOptionalInteger(record.drivers),
     physical_address: record.physicalAddress ?? null,
     truck_type: record.truckType ?? null,
+    website: record.website ?? null,
+    equipment_type: record.equipmentType ?? null,
+    cargo_carried: record.cargoCarried ?? null,
+    operation_classification: record.operationClassification ?? null,
+    carrier_operation: record.carrierOperation ?? null,
+    authority_information: record.authorityInformation ?? null,
+    fleet_size_category: record.fleetSizeCategory ?? null,
+    inferred_truck_type: record.inferredTruckType ?? null,
+    data_source: record.dataSource ?? null,
+    enrichment_status: record.enrichmentStatus ?? null,
     import_status: record.importStatus,
     created_at: record.scrapedAt,
   };
@@ -85,6 +111,20 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
   if (record.physicalAddress !== undefined) payload.physical_address = record.physicalAddress ?? null;
   if (record.truckType !== undefined) payload.truck_type = record.truckType ?? null;
+  if (record.website !== undefined) payload.website = record.website ?? null;
+  if (record.equipmentType !== undefined) payload.equipment_type = record.equipmentType ?? null;
+  if (record.cargoCarried !== undefined) payload.cargo_carried = record.cargoCarried ?? null;
+  if (record.operationClassification !== undefined) {
+    payload.operation_classification = record.operationClassification ?? null;
+  }
+  if (record.carrierOperation !== undefined) payload.carrier_operation = record.carrierOperation ?? null;
+  if (record.authorityInformation !== undefined) {
+    payload.authority_information = record.authorityInformation ?? null;
+  }
+  if (record.fleetSizeCategory !== undefined) payload.fleet_size_category = record.fleetSizeCategory ?? null;
+  if (record.inferredTruckType !== undefined) payload.inferred_truck_type = record.inferredTruckType ?? null;
+  if (record.dataSource !== undefined) payload.data_source = record.dataSource ?? null;
+  if (record.enrichmentStatus !== undefined) payload.enrichment_status = record.enrichmentStatus ?? null;
   if (record.importStatus !== undefined) payload.import_status = record.importStatus;
 
   return payload;
@@ -107,7 +147,17 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     drivers: row.drivers !== null ? String(row.drivers) : undefined,
     physicalAddress: row.physical_address ?? undefined,
     truckType: row.truck_type ?? undefined,
-    importStatus: row.import_status,
+    website: row.website ?? undefined,
+    equipmentType: mapEquipmentType(row.equipment_type),
+    cargoCarried: row.cargo_carried ?? undefined,
+    operationClassification: mapOperationClassificationType(row.operation_classification),
+    carrierOperation: mapCarrierOperationType(row.carrier_operation),
+    authorityInformation: row.authority_information ?? undefined,
+    fleetSizeCategory: mapFleetSizeCategory(row.fleet_size_category),
+    inferredTruckType: mapInferredTruckType(row.inferred_truck_type),
+    dataSource: row.data_source ?? undefined,
+    enrichmentStatus: mapEnrichmentStatus(row.enrichment_status),
+    importStatus: mapImportStatus(row.import_status) ?? "failed",
     sourceUrl: buildSaferUrl(row.mc_number),
     scrapedAt: row.created_at,
   };

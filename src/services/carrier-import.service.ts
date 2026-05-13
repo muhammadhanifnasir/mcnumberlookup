@@ -1,8 +1,9 @@
 import type { Page } from "playwright-core";
 
 import type { CarrierRecord } from "@/types/carrier";
+import { enrichCarrierRecord } from "@/services/carrier-enrichment.service";
 import { upsertCarrierForImport } from "@/services/carrier-write.service";
-import { processConcurrentQueue } from "@/services/queue.service";
+import { processSequentialQueue } from "@/services/queue.service";
 import {
   buildSaferUrl,
   closeSaferScraperSession,
@@ -25,19 +26,8 @@ const UPSERT_RETRY_OPTIONS = {
   maxDelayMs: 5_000,
 };
 
-const DEFAULT_IMPORT_CONCURRENCY = 4;
-const MAX_IMPORT_CONCURRENCY = 8;
 const INTER_REQUEST_MIN_MS = 500;
 const INTER_REQUEST_MAX_MS = 1_200;
-
-function resolveImportConcurrency(total: number) {
-  const raw = process.env.IMPORT_CONCURRENCY;
-  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_IMPORT_CONCURRENCY;
-  const bounded = Number.isFinite(parsed)
-    ? Math.min(MAX_IMPORT_CONCURRENCY, Math.max(1, parsed))
-    : DEFAULT_IMPORT_CONCURRENCY;
-  return Math.min(total, bounded);
-}
 
 function buildFailedRecord(mcNumber: string, error: unknown): CarrierRecord {
   const message = error instanceof Error ? error.message : String(error);
@@ -47,6 +37,8 @@ function buildFailedRecord(mcNumber: string, error: unknown): CarrierRecord {
     sourceUrl: buildSaferUrl(mcNumber),
     scrapedAt: new Date().toISOString(),
     importStatus: "failed",
+    enrichmentStatus: "failed",
+    dataSource: "fmcsa_safer",
     importError: message || "Unknown scrape error",
   };
 }
@@ -63,15 +55,20 @@ async function processOneMcNumber(mcNumber: string, page: Page): Promise<Carrier
       `scrape MC#${mcNumber}`,
     );
 
-    record = scraped
-      ? { ...scraped, importStatus: "imported" }
-      : {
-          mcNumber,
-          sourceUrl,
-          scrapedAt: new Date().toISOString(),
-          importStatus: "not_found",
-          importError: "Carrier not found in FMCSA SAFER.",
-        };
+    if (!scraped) {
+      record = {
+        mcNumber,
+        sourceUrl,
+        scrapedAt: new Date().toISOString(),
+        importStatus: "not_found",
+        enrichmentStatus: "failed",
+        dataSource: "fmcsa_safer",
+        importError: "Carrier not found in FMCSA SAFER.",
+      };
+    } else {
+      const enriched = await enrichCarrierRecord({ ...scraped, importStatus: "imported" });
+      record = enriched;
+    }
   } catch (error) {
     logger.error("Scrape failed after retries", {
       mcNumber,
@@ -91,34 +88,18 @@ export async function importCarriersSequentially(mcNumbers: string[]) {
   logger.info("Starting carrier import", { count: mcNumbers.length });
 
   const session = await createSaferScraperSession();
-  const concurrency = resolveImportConcurrency(mcNumbers.length);
-  const pages: Page[] = [session.page];
+  const page: Page = session.page;
 
   try {
-    for (let i = 1; i < concurrency; i += 1) {
-      pages.push(await session.browser.newPage());
-    }
-
-    logger.info("Import concurrency resolved", { concurrency });
-
-    const queueResults = await processConcurrentQueue(
+    const queueResults = await processSequentialQueue(
       mcNumbers,
-      async (mcNumber, _index, _total, workerId) => {
-        if (workerId < 0 || workerId >= pages.length) {
-          throw new Error(`Worker ${workerId} is out of bounds for ${pages.length} pages`);
-        }
-        const page = pages[workerId];
-        if (!page) {
-          throw new Error(`Missing scraper page for worker ${workerId}`);
-        }
-
+      async (mcNumber) => {
         try {
           return await processOneMcNumber(mcNumber, page);
         } finally {
           await randomDelay(INTER_REQUEST_MIN_MS, INTER_REQUEST_MAX_MS);
         }
       },
-      concurrency,
     );
 
     const results: CarrierRecord[] = queueResults.map((qr) => {
@@ -129,6 +110,8 @@ export async function importCarriersSequentially(mcNumbers: string[]) {
         sourceUrl: buildSaferUrl(String(qr.input)),
         scrapedAt: new Date().toISOString(),
         importStatus: "failed" as const,
+        enrichmentStatus: "failed" as const,
+        dataSource: "fmcsa_safer",
         importError: qr.error ?? "Unknown error",
       };
     });
@@ -140,11 +123,6 @@ export async function importCarriersSequentially(mcNumbers: string[]) {
 
     return results;
   } finally {
-    await Promise.all(
-      pages.slice(1).map(async (page) => {
-        await page.close().catch(() => undefined);
-      }),
-    );
     await closeSaferScraperSession(session);
   }
 }
