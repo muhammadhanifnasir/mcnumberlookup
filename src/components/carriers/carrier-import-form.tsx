@@ -20,6 +20,46 @@ type ImportResponse = {
   results: CarrierRecord[];
 };
 
+const CSV_COLUMNS: { header: string; value: (carrier: CarrierRecord) => string }[] = [
+  { header: "MC", value: (carrier) => carrier.mcNumber },
+  { header: "USDOT", value: (carrier) => carrier.usdotNumber ?? "" },
+  { header: "Carrier", value: (carrier) => carrier.legalName ?? carrier.dbaName ?? "" },
+  { header: "Owner Status", value: (carrier) => carrier.ownerStatus ?? "" },
+  { header: "Email", value: (carrier) => carrier.emailAddress ?? "" },
+  { header: "Physical Address", value: (carrier) => carrier.physicalAddress ?? "" },
+  { header: "Truck Type", value: (carrier) => carrier.truckType ?? "" },
+  { header: "Phone", value: (carrier) => carrier.phone ?? "" },
+  { header: "Status", value: (carrier) => carrier.importStatus },
+  { header: "Scraped At", value: (carrier) => carrier.scrapedAt },
+];
+
+function escapeCsvValue(value: string) {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replaceAll('"', '""')}"`;
+  }
+  return value;
+}
+
+function generateCarrierCsv(rows: CarrierRecord[]) {
+  const header = CSV_COLUMNS.map((column) => escapeCsvValue(column.header)).join(",");
+  const lines = rows.map((row) =>
+    CSV_COLUMNS.map((column) => escapeCsvValue(column.value(row))).join(","),
+  );
+
+  return `${header}\n${lines.join("\n")}`;
+}
+
+function formatTimestampForFilename(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
+}
+
 export function CarrierImportForm() {
   const [mcInput, setMcInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,6 +67,26 @@ export function CarrierImportForm() {
   const [summary, setSummary] = useState<ImportResponse | null>(null);
 
   const parsedCount = useMemo(() => parseMcNumbers(mcInput).length, [mcInput]);
+  const hasResults = Boolean(summary?.results.length);
+
+  function onDownloadCsv() {
+    if (!summary?.results.length) {
+      return;
+    }
+
+    const csvContent = generateCarrierCsv(summary.results);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const timestamp = formatTimestampForFilename(new Date());
+
+    link.href = url;
+    link.setAttribute("download", `carrier-import-results-${timestamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -102,6 +162,11 @@ export function CarrierImportForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 flex justify-end">
+              <Button type="button" variant="outline" onClick={onDownloadCsv} disabled={!hasResults}>
+                Download CSV
+              </Button>
+            </div>
             <CarriersTable data={summary.results} />
           </CardContent>
         </Card>
