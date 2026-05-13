@@ -1,4 +1,4 @@
-import type { FleetSizeCategory, InferredTruckType } from "@/types/carrier";
+import type { EquipmentType, FleetSizeCategory, InferredTruckType } from "@/types/carrier";
 import { toNormalizedLower } from "@/utils/normalization";
 
 export type CarrierClassificationInput = {
@@ -82,7 +82,7 @@ function inferTruckType(input: CarrierClassificationInput, fleetSizeCategory: Fl
 export function classifyCarrier(input: CarrierClassificationInput): {
   fleetSizeCategory: FleetSizeCategory;
   inferredTruckType?: InferredTruckType;
-  equipmentType?: string;
+  equipmentType?: EquipmentType;
 } {
   const fleetSizeCategory = classifyFleetSize(input.powerUnits, input.drivers);
   const inferredTruckType = inferTruckType(input, fleetSizeCategory);

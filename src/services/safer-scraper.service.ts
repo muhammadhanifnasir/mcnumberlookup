@@ -4,6 +4,10 @@ import { chromium, type Browser, type Page } from "playwright-core";
 import type { ScrapedCarrierData } from "@/types/carrier";
 import { logger } from "@/utils/logger";
 import {
+  mapCarrierOperationType,
+  mapOperationClassificationType,
+} from "@/utils/carrier-type-mappers";
+import {
   extractEmail,
   extractEmailFromMailtoHref,
   extractFirstTextField,
@@ -117,8 +121,12 @@ export async function scrapeCarrierByMcWithPage(
     physicalAddress: extractTextField(bodyText, "Physical Address"),
     truckType: extractFirstTextField(bodyText, ["Truck Type", "Vehicle Type", "Cargo Carried"]),
     mailingAddress: extractTextField(bodyText, "Mailing Address"),
-    operationClassification: extractTextField(bodyText, "Operation Classification"),
-    carrierOperation: extractFirstTextField(bodyText, ["Carrier Operation", "Carrier Operations"]),
+    operationClassification: mapOperationClassificationType(
+      extractTextField(bodyText, "Operation Classification"),
+    ),
+    carrierOperation: mapCarrierOperationType(
+      extractFirstTextField(bodyText, ["Carrier Operation", "Carrier Operations"]),
+    ),
     cargoCarried: extractFirstTextField(bodyText, ["Cargo Carried", "Cargo"]),
     authorityInformation: extractFirstTextField(bodyText, [
       "Authority Information",

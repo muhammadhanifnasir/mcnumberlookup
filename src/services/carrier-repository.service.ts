@@ -3,6 +3,15 @@ import type { CarrierRecord } from "@/types/carrier";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import { buildSaferUrl } from "@/services/safer-scraper.service";
+import {
+  mapCarrierOperationType,
+  mapEnrichmentStatus,
+  mapEquipmentType,
+  mapFleetSizeCategory,
+  mapImportStatus,
+  mapInferredTruckType,
+  mapOperationClassificationType,
+} from "@/utils/carrier-type-mappers";
 
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
@@ -25,34 +34,6 @@ const CARRIER_SEARCH_FIELDS = [
   "inferred_truck_type",
   "enrichment_status",
 ] as const;
-const FLEET_SIZE_CATEGORIES = [
-  "Owner Operator",
-  "Small Fleet",
-  "Medium Fleet",
-  "Enterprise Fleet",
-] as const;
-const INFERRED_TRUCK_TYPES = [
-  "Dry Van",
-  "Reefer",
-  "Flatbed",
-  "Hotshot",
-  "Box Truck",
-  "Car Hauler",
-  "Tanker",
-  "Hazmat",
-  "Power Only",
-] as const;
-
-function toFleetSizeCategory(value: string | null | undefined) {
-  if (!value) return undefined;
-  return FLEET_SIZE_CATEGORIES.find((category) => category === value);
-}
-
-function toInferredTruckType(value: string | null | undefined) {
-  if (!value) return undefined;
-  return INFERRED_TRUCK_TYPES.find((truckType) => truckType === value);
-}
-
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
 export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
 export type CarrierUpdatePayload = Database["public"]["Tables"]["carriers"]["Update"];
@@ -167,16 +148,16 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     physicalAddress: row.physical_address ?? undefined,
     truckType: row.truck_type ?? undefined,
     website: row.website ?? undefined,
-    equipmentType: row.equipment_type ?? undefined,
+    equipmentType: mapEquipmentType(row.equipment_type),
     cargoCarried: row.cargo_carried ?? undefined,
-    operationClassification: row.operation_classification ?? undefined,
-    carrierOperation: row.carrier_operation ?? undefined,
+    operationClassification: mapOperationClassificationType(row.operation_classification),
+    carrierOperation: mapCarrierOperationType(row.carrier_operation),
     authorityInformation: row.authority_information ?? undefined,
-    fleetSizeCategory: toFleetSizeCategory(row.fleet_size_category),
-    inferredTruckType: toInferredTruckType(row.inferred_truck_type),
+    fleetSizeCategory: mapFleetSizeCategory(row.fleet_size_category),
+    inferredTruckType: mapInferredTruckType(row.inferred_truck_type),
     dataSource: row.data_source ?? undefined,
-    enrichmentStatus: row.enrichment_status ?? undefined,
-    importStatus: row.import_status,
+    enrichmentStatus: mapEnrichmentStatus(row.enrichment_status),
+    importStatus: mapImportStatus(row.import_status) ?? "failed",
     sourceUrl: buildSaferUrl(row.mc_number),
     scrapedAt: row.created_at,
   };

@@ -3,6 +3,10 @@ import type { CarrierRecord, EnrichmentStatus } from "@/types/carrier";
 import { classifyCarrier } from "@/services/carrier-classification.service";
 import { extractBusinessEmailFromWebsite } from "@/services/email-extraction.service";
 import { discoverCarrierWebsite } from "@/services/website-discovery.service";
+import {
+  mapCarrierOperationType,
+  mapOperationClassificationType,
+} from "@/utils/carrier-type-mappers";
 import { normalizeEmail, normalizeWebsiteUrl, normalizeWhitespace } from "@/utils/normalization";
 
 function resolveEnrichmentStatus(input: {
@@ -46,8 +50,12 @@ export async function enrichCarrierRecord(record: CarrierRecord): Promise<Carrie
   const emailAddress = normalizeEmail(record.emailAddress) ?? normalizeEmail(scrapedWebsiteEmail);
 
   const cargoCarried = normalizeWhitespace(record.cargoCarried ?? record.truckType);
-  const operationClassification = normalizeWhitespace(record.operationClassification);
-  const carrierOperation = normalizeWhitespace(record.carrierOperation ?? record.ownerStatus);
+  const operationClassification = mapOperationClassificationType(
+    normalizeWhitespace(record.operationClassification),
+  );
+  const carrierOperation = mapCarrierOperationType(
+    normalizeWhitespace(record.carrierOperation ?? record.ownerStatus),
+  );
 
   const classification = classifyCarrier({
     cargoCarried,

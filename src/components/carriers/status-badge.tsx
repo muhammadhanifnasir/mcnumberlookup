@@ -1,7 +1,7 @@
-import type { CarrierImportStatus } from "@/types/carrier";
 import { cn } from "@/lib/utils";
+import { mapEnrichmentStatus, mapImportStatus } from "@/utils/carrier-type-mappers";
 
-const statusClassMap: Record<CarrierImportStatus, string> = {
+const statusClassMap: Record<"imported" | "not_found" | "failed", string> = {
   imported: "bg-emerald-100 text-emerald-700 border border-emerald-300/40",
   not_found: "bg-amber-100 text-amber-700 border border-amber-300/40",
   failed: "bg-red-100 text-red-700 border border-red-300/40",
@@ -31,12 +31,15 @@ export function StatusBadge({ status, kind = "import", className }: StatusBadgeP
   const trimmedStatus = status?.trim();
   const normalized = trimmedStatus ? trimmedStatus.toLowerCase().replaceAll(/\s+/g, "_") : undefined;
   const fallbackClass = "bg-slate-100 text-slate-700 border border-slate-300/40";
+  const mappedImportStatus = mapImportStatus(normalized);
+  const mappedEnrichmentStatus = mapEnrichmentStatus(normalized);
   const badgeClass =
     kind === "import"
-      ? (normalized ? statusClassMap[normalized as CarrierImportStatus] : undefined) ?? fallbackClass
+      ? (mappedImportStatus ? statusClassMap[mappedImportStatus] : undefined) ?? fallbackClass
       : kind === "usdot"
         ? (normalized ? usdotStatusClassMap[normalized] : undefined) ?? fallbackClass
-        : (normalized ? enrichmentStatusClassMap[normalized] : undefined) ?? fallbackClass;
+        : (mappedEnrichmentStatus ? enrichmentStatusClassMap[mappedEnrichmentStatus] : undefined) ??
+          fallbackClass;
 
   const label = normalized ? normalized.replaceAll("_", " ") : "unknown";
 

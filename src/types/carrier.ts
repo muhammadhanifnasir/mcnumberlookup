@@ -15,6 +15,24 @@ export type InferredTruckType =
   | "Tanker"
   | "Hazmat"
   | "Power Only";
+export type EquipmentType = InferredTruckType | "Other";
+export type CarrierOperationType =
+  | "Interstate"
+  | "Intrastate Hazmat"
+  | "Intrastate Non-Hazmat"
+  | "Private"
+  | "For Hire"
+  | "Exempt For Hire"
+  | "Other";
+export type OperationClassificationType =
+  | "Authorized For Hire"
+  | "Exempt For Hire"
+  | "Private(Property)"
+  | "Private(Passengers)"
+  | "Private(HM)"
+  | "Migrant"
+  | "U.S. Mail"
+  | "Other";
 
 export type ScrapedCarrierData = {
   mcNumber: string;
@@ -33,13 +51,13 @@ export type ScrapedCarrierData = {
   physicalAddress?: string;
   truckType?: string;
   mailingAddress?: string;
-  operationClassification?: string;
-  carrierOperation?: string;
+  operationClassification?: OperationClassificationType;
+  carrierOperation?: CarrierOperationType;
   cargoCarried?: string;
   authorityInformation?: string;
   outOfServiceDate?: string;
   website?: string;
-  equipmentType?: string;
+  equipmentType?: EquipmentType;
   fleetSizeCategory?: FleetSizeCategory;
   inferredTruckType?: InferredTruckType;
   dataSource?: string;
