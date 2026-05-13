@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { assertSupabaseConfiguration } from "@/lib/supabase/env";
 import { importCarriersSequentially } from "@/services/carrier-import.service";
-import { logger } from "@/utils/logger";
 import { parseMcNumbers } from "@/utils/mc";
 
 export const runtime = "nodejs";
@@ -13,11 +13,16 @@ type ImportCarriersPayload = {
 
 export async function POST(request: Request) {
   try {
+    assertSupabaseConfiguration();
+
     const payload = (await request.json()) as ImportCarriersPayload;
 
     if (!Array.isArray(payload.mcNumbers)) {
       return NextResponse.json(
-        { error: "mcNumbers must be an array of MC number strings." },
+        {
+          success: false,
+          error: "mcNumbers must be an array of MC number strings.",
+        },
         { status: 400 },
       );
     }
@@ -28,28 +33,33 @@ export async function POST(request: Request) {
 
     if (mcNumbers.length === 0) {
       return NextResponse.json(
-        { error: "At least one valid MC number is required." },
+        {
+          success: false,
+          error: "At least one valid MC number is required.",
+        },
         { status: 400 },
       );
     }
 
-    logger.info("/api/import-carriers request received", { count: mcNumbers.length });
-
     const results = await importCarriersSequentially(mcNumbers);
 
     return NextResponse.json({
-      processed: mcNumbers.length,
-      imported: results.filter((r) => r.importStatus === "imported").length,
-      failed: results.filter((r) => r.importStatus === "failed").length,
-      notFound: results.filter((r) => r.importStatus === "not_found").length,
-      results,
+      success: true,
+      data: {
+        processed: mcNumbers.length,
+        imported: results.filter((r) => r.importStatus === "imported").length,
+        failed: results.filter((r) => r.importStatus === "failed").length,
+        notFound: results.filter((r) => r.importStatus === "not_found").length,
+        results,
+      },
     });
   } catch (error) {
-    logger.error("/api/import-carriers unhandled error", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error(error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to import carriers." },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown server error",
+      },
       { status: 500 },
     );
   }

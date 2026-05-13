@@ -88,6 +88,7 @@ export function CarrierDetailsModal({ carrier, onClose }: CarrierDetailsModalPro
             <DetailsRow label="Inferred Truck Type" value={carrier.inferredTruckType} />
             <DetailsRow label="Authority Information" value={carrier.authorityInformation} />
             <DetailsRow label="Data Source" value={carrier.dataSource} />
+            <DetailsRow label="Import Error" value={carrier.importError} />
             <DetailsRow label="Created At" value={new Date(carrier.scrapedAt).toLocaleString()} />
             <DetailsRow label="Source URL" value={carrier.sourceUrl} />
           </div>

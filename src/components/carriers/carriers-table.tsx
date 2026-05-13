@@ -16,6 +16,7 @@ const columns = [
   { key: "enrichmentStatus", label: "Enrichment" },
   { key: "phone", label: "Phone" },
   { key: "status", label: "Status" },
+  { key: "error", label: "Error" },
   { key: "updated", label: "Scraped At" },
 ];
 
@@ -41,6 +42,9 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.phone ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3">
             <StatusBadge status={carrier.importStatus} />
+          </td>
+          <td className="max-w-[320px] px-4 py-3 text-muted-foreground">
+            <span className="line-clamp-2">{carrier.importError ?? "-"}</span>
           </td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
             {new Date(carrier.scrapedAt).toLocaleString()}

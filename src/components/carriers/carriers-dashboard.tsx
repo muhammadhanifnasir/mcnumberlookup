@@ -11,6 +11,7 @@ import { Pagination } from "@/components/common/pagination";
 import { SearchBar } from "@/components/common/search-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
 
 type CarrierListResponse = {
@@ -21,7 +22,6 @@ type CarrierListResponse = {
     total: number;
     totalPages: number;
   };
-  error?: string;
 };
 
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
@@ -66,11 +66,7 @@ export function CarriersDashboard() {
         method: "GET",
         cache: "no-store",
       });
-      const payload = (await response.json()) as CarrierListResponse;
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to load carriers.");
-      }
+      const payload = await readApiResponse<CarrierListResponse>(response);
 
       setRecords(payload.data ?? []);
       setTotal(payload.pagination?.total ?? 0);
@@ -118,10 +114,7 @@ export function CarriersDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mcNumbers: [mcNumber] }),
       });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? `Failed to retry MC ${mcNumber}.`);
-      }
+      await readApiResponse(response);
       await loadData();
     } catch (retryError) {
       setError(retryError instanceof Error ? retryError.message : "Retry failed.");
@@ -142,10 +135,7 @@ export function CarriersDashboard() {
       setConfirmDeleteAll(false);
 
       const response = await fetch("/api/carriers?all=true", { method: "DELETE" });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to delete carriers.");
-      }
+      await readApiResponse(response);
 
       setSelectedCarrier(null);
       setPage(1);
@@ -254,6 +244,15 @@ export function CarriersDashboard() {
         accessorKey: "enrichmentStatus",
         header: "Enrichment",
         cell: ({ row }) => <StatusBadge status={row.original.enrichmentStatus} kind="enrichment" />,
+      },
+      {
+        accessorKey: "importError",
+        header: "Error",
+        cell: ({ row }) => (
+          <div className="max-w-xs whitespace-normal text-xs text-muted-foreground">
+            {row.original.importError ?? "-"}
+          </div>
+        ),
       },
       {
         id: "createdAt",
@@ -367,6 +366,7 @@ export function CarriersDashboard() {
                   <div>Power Units: {row.powerUnits ?? "-"}</div>
                   <div>Drivers: {row.drivers ?? "-"}</div>
                   <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
+                  <div className="col-span-2">Error: {row.importError ?? "-"}</div>
                 </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
