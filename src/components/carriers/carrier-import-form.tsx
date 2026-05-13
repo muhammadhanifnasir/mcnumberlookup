@@ -63,7 +63,7 @@ export function CarrierImportForm() {
           <CardTitle>Import MC Numbers</CardTitle>
           <CardDescription>
             Paste MC numbers separated by line, comma, or semicolon. You can also enter ranges like
-            1000-1010. Imports run with parallel workers for faster extraction.
+            1000-1010. Imports run sequentially for safe scraping and enrichment.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -78,7 +78,7 @@ export function CarrierImportForm() {
               <p className="text-sm text-muted-foreground">Valid MC count: {parsedCount}</p>
               <div className="flex items-center gap-2">
                 <Button type="submit" disabled={isSubmitting || parsedCount === 0}>
-                  {isSubmitting ? "Importing..." : "Start Fast Import"}
+                  {isSubmitting ? "Importing..." : "Start Sequential Import"}
                 </Button>
                 <Link href="/carriers" className={cn(buttonVariants({ variant: "outline" }))}>
                   View Carriers
@@ -90,7 +90,7 @@ export function CarrierImportForm() {
       </Card>
 
       {error ? <ErrorState message={error} /> : null}
-      {isSubmitting ? <LoadingState label="Processing MC numbers with parallel workers..." /> : null}
+      {isSubmitting ? <LoadingState label="Processing MC numbers sequentially..." /> : null}
 
       {summary ? (
         <Card>

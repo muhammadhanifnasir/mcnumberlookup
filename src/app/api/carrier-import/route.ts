@@ -4,7 +4,7 @@ import { importCarriersSequentially } from "@/services/carrier-import.service";
 import { parseMcNumbers } from "@/utils/mc";
 
 export const runtime = "nodejs";
-export const maxDuration = 300; // 5 minutes for larger parallel import batches
+export const maxDuration = 300; // 5 minutes for larger sequential import batches
 
 type ImportPayload = {
   mcInput?: string;

@@ -14,9 +14,16 @@ const usdotStatusClassMap: Record<string, string> = {
   inactive: "bg-slate-100 text-slate-700 border border-slate-300/40",
 };
 
+const enrichmentStatusClassMap: Record<string, string> = {
+  enriched: "bg-emerald-100 text-emerald-700 border border-emerald-300/40",
+  partial: "bg-amber-100 text-amber-700 border border-amber-300/40",
+  failed: "bg-red-100 text-red-700 border border-red-300/40",
+  pending: "bg-blue-100 text-blue-700 border border-blue-300/40",
+};
+
 type StatusBadgeProps = {
   status?: string;
-  kind?: "import" | "usdot";
+  kind?: "import" | "usdot" | "enrichment";
   className?: string;
 };
 
@@ -27,7 +34,9 @@ export function StatusBadge({ status, kind = "import", className }: StatusBadgeP
   const badgeClass =
     kind === "import"
       ? (normalized ? statusClassMap[normalized as CarrierImportStatus] : undefined) ?? fallbackClass
-      : (normalized ? usdotStatusClassMap[normalized] : undefined) ?? fallbackClass;
+      : kind === "usdot"
+        ? (normalized ? usdotStatusClassMap[normalized] : undefined) ?? fallbackClass
+        : (normalized ? enrichmentStatusClassMap[normalized] : undefined) ?? fallbackClass;
 
   const label = normalized ? normalized.replaceAll("_", " ") : "unknown";
 

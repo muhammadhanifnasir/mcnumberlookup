@@ -9,8 +9,11 @@ const columns = [
   { key: "name", label: "Carrier" },
   { key: "ownerStatus", label: "Owner Status" },
   { key: "email", label: "Email" },
+  { key: "website", label: "Website" },
   { key: "physicalAddress", label: "Physical Address" },
-  { key: "truckType", label: "Truck Type" },
+  { key: "equipmentType", label: "Equipment Type" },
+  { key: "fleetSizeCategory", label: "Fleet Category" },
+  { key: "enrichmentStatus", label: "Enrichment" },
   { key: "phone", label: "Phone" },
   { key: "status", label: "Status" },
   { key: "updated", label: "Scraped At" },
@@ -26,8 +29,15 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
           <td className="px-4 py-3 text-card-foreground">{carrier.legalName ?? carrier.dbaName ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.ownerStatus ?? "-"}</td>
           <td className="px-4 py-3 text-muted-foreground">{carrier.emailAddress ?? "-"}</td>
+          <td className="px-4 py-3 text-muted-foreground">{carrier.website ?? "-"}</td>
           <td className="px-4 py-3 text-muted-foreground">{carrier.physicalAddress ?? "-"}</td>
-          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.truckType ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+            {carrier.equipmentType ?? carrier.truckType ?? "-"}
+          </td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.fleetSizeCategory ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3">
+            <StatusBadge status={carrier.enrichmentStatus} kind="enrichment" />
+          </td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.phone ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3">
             <StatusBadge status={carrier.importStatus} />

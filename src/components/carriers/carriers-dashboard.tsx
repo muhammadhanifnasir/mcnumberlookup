@@ -26,6 +26,14 @@ type CarrierListResponse = {
 
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
 
+function InfoBadge({ value }: { value?: string }) {
+  return (
+    <span className="inline-flex rounded-full border border-slate-300/40 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+      {value ?? "-"}
+    </span>
+  );
+}
+
 export function CarriersDashboard() {
   const [records, setRecords] = useState<CarrierRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,6 +185,23 @@ export function CarriersDashboard() {
         cell: ({ row }) => row.original.emailAddress ?? "-",
       },
       {
+        accessorKey: "website",
+        header: "Website",
+        cell: ({ row }) =>
+          row.original.website ? (
+            <a
+              href={row.original.website}
+              target="_blank"
+              rel="noreferrer"
+              className="max-w-[220px] truncate text-xs text-blue-700 underline"
+            >
+              {row.original.website}
+            </a>
+          ) : (
+            "-"
+          ),
+      },
+      {
         accessorKey: "physicalAddress",
         header: "Physical Address",
         cell: ({ row }) => (
@@ -186,9 +211,19 @@ export function CarriersDashboard() {
         ),
       },
       {
-        accessorKey: "truckType",
-        header: "Truck Type",
-        cell: ({ row }) => row.original.truckType ?? "-",
+        accessorKey: "equipmentType",
+        header: "Equipment",
+        cell: ({ row }) => <InfoBadge value={row.original.equipmentType ?? row.original.truckType} />,
+      },
+      {
+        accessorKey: "fleetSizeCategory",
+        header: "Fleet Category",
+        cell: ({ row }) => <InfoBadge value={row.original.fleetSizeCategory} />,
+      },
+      {
+        accessorKey: "inferredTruckType",
+        header: "Inferred Type",
+        cell: ({ row }) => <InfoBadge value={row.original.inferredTruckType} />,
       },
       {
         accessorKey: "phone",
@@ -214,6 +249,11 @@ export function CarriersDashboard() {
         accessorKey: "importStatus",
         header: "Import Status",
         cell: ({ row }) => <StatusBadge status={row.original.importStatus} kind="import" />,
+      },
+      {
+        accessorKey: "enrichmentStatus",
+        header: "Enrichment",
+        cell: ({ row }) => <StatusBadge status={row.original.enrichmentStatus} kind="enrichment" />,
       },
       {
         id: "createdAt",
@@ -269,7 +309,7 @@ export function CarriersDashboard() {
       <CardHeader>
         <CardTitle>Carrier Results Dashboard</CardTitle>
         <CardDescription>
-          Imported FMCSA SAFER carriers with live status, sorting, search, and recovery actions.
+          Carrier intelligence records with SAFER enrichment, classification, and recovery actions.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -315,18 +355,24 @@ export function CarriersDashboard() {
                 </div>
                 <StatusBadge status={row.importStatus} kind="import" />
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <div>USDOT: {row.usdotNumber ?? "-"}</div>
-                <div>Owner: {row.ownerStatus ?? "-"}</div>
-                <div>Email: {row.emailAddress ?? "-"}</div>
-                <div>Phone: {row.phone ?? "-"}</div>
-                <div>Truck Type: {row.truckType ?? "-"}</div>
-                <div>Power Units: {row.powerUnits ?? "-"}</div>
-                <div>Drivers: {row.drivers ?? "-"}</div>
-                <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
-              </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div>USDOT: {row.usdotNumber ?? "-"}</div>
+                  <div>Owner: {row.ownerStatus ?? "-"}</div>
+                  <div>Email: {row.emailAddress ?? "-"}</div>
+                  <div>Website: {row.website ?? "-"}</div>
+                  <div>Phone: {row.phone ?? "-"}</div>
+                  <div>Equipment: {row.equipmentType ?? row.truckType ?? "-"}</div>
+                  <div>Fleet: {row.fleetSizeCategory ?? "-"}</div>
+                  <div>Inferred Type: {row.inferredTruckType ?? "-"}</div>
+                  <div>Power Units: {row.powerUnits ?? "-"}</div>
+                  <div>Drivers: {row.drivers ?? "-"}</div>
+                  <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
+                </div>
               <div className="flex items-center justify-between gap-2">
-                <StatusBadge status={row.usdotStatus} kind="usdot" />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={row.usdotStatus} kind="usdot" />
+                  <StatusBadge status={row.enrichmentStatus} kind="enrichment" />
+                </div>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"

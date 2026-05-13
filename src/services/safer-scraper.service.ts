@@ -12,6 +12,7 @@ import {
   extractTextField,
   normalizeStatus,
 } from "@/utils/parser";
+import { normalizeWebsiteUrl } from "@/utils/normalization";
 
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
@@ -84,7 +85,9 @@ export async function scrapeCarrierByMcWithPage(
       ? normalizedInnerText
       : normalizedTextContent;
   const mailtoHref = await page.locator('a[href^="mailto:"]').first().getAttribute("href");
+  const websiteHref = await page.locator('a[href^="http"]').first().getAttribute("href");
   const emailAddress = extractEmail(bodyText) ?? extractEmailFromMailtoHref(mailtoHref);
+  const website = normalizeWebsiteUrl(websiteHref);
 
   if (/no records matching your query were found/i.test(bodyText)) {
     logger.info("Carrier not found in SAFER", { mcNumber });
@@ -115,7 +118,17 @@ export async function scrapeCarrierByMcWithPage(
     truckType: extractFirstTextField(bodyText, ["Truck Type", "Vehicle Type", "Cargo Carried"]),
     mailingAddress: extractTextField(bodyText, "Mailing Address"),
     operationClassification: extractTextField(bodyText, "Operation Classification"),
+    carrierOperation: extractFirstTextField(bodyText, ["Carrier Operation", "Carrier Operations"]),
+    cargoCarried: extractFirstTextField(bodyText, ["Cargo Carried", "Cargo"]),
+    authorityInformation: extractFirstTextField(bodyText, [
+      "Authority Information",
+      "Authority Type",
+      "Authority",
+    ]),
     outOfServiceDate: extractTextField(bodyText, "Out of Service Date"),
+    website,
+    enrichmentStatus: "pending",
+    dataSource: "fmcsa_safer",
     sourceUrl,
     scrapedAt: new Date().toISOString(),
   };
