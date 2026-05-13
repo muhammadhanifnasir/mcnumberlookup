@@ -1,8 +1,14 @@
-type ApiEnvelope<T> = {
-  success?: boolean;
-  data?: T;
-  error?: string;
+type ApiSuccessEnvelope<T> = {
+  success: true;
+  data: T;
 };
+
+type ApiErrorEnvelope = {
+  success: false;
+  error: string;
+};
+
+type ApiEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope;
 
 function tryParseJson<T>(raw: string): T | null {
   if (!raw.trim()) return null;
@@ -20,13 +26,17 @@ export async function readApiResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     const message =
-      (parsed && typeof parsed.error === "string" && parsed.error) ||
+      (parsed && parsed.success === false && typeof parsed.error === "string" && parsed.error) ||
       raw.trim() ||
       `Request failed with status ${response.status}`;
     throw new Error(message);
   }
 
-  if (!parsed || parsed.success !== true || typeof parsed.data === "undefined") {
+  if (
+    !parsed ||
+    parsed.success !== true ||
+    !Object.prototype.hasOwnProperty.call(parsed, "data")
+  ) {
     throw new Error("Invalid server response format.");
   }
 
