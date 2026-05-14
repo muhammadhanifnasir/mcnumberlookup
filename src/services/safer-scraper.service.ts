@@ -17,7 +17,7 @@ import { normalizeWebsiteUrl } from "@/utils/normalization";
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
-const SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
+const MAX_SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
 const SUPPLEMENTAL_ALLOWED_DOMAIN = "fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
@@ -164,7 +164,15 @@ async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Prom
     }
   }
 
-  return [...urls].slice(0, SUPPLEMENTAL_PAGES_PER_CARRIER);
+  const discoveredUrls = [...urls];
+  if (discoveredUrls.length > MAX_SUPPLEMENTAL_PAGES_PER_CARRIER) {
+    logger.info("Limiting supplemental SAFER/SMS pages", {
+      discovered: discoveredUrls.length,
+      limit: MAX_SUPPLEMENTAL_PAGES_PER_CARRIER,
+    });
+  }
+
+  return discoveredUrls.slice(0, MAX_SUPPLEMENTAL_PAGES_PER_CARRIER);
 }
 
 async function collectSupplementalPageData(
@@ -307,8 +315,8 @@ export async function scrapeCarrierByMcWithPage(
   const supplementalUrls = await discoverSupplementalPageUrls(page, sourceUrl);
   const supplementalData = await collectSupplementalPageData(page, supplementalUrls, mcNumber);
   const combinedBodyText = [bodyText, ...supplementalData.texts].join("\n");
-  const combinedMailtoHrefs = [...mailtoHrefs, ...supplementalData.mailtoHrefs];
-  const combinedWebsiteHrefs = [...websiteHrefs, ...supplementalData.websiteHrefs];
+  const combinedMailtoHrefs = [...new Set([...mailtoHrefs, ...supplementalData.mailtoHrefs])];
+  const combinedWebsiteHrefs = [...new Set([...websiteHrefs, ...supplementalData.websiteHrefs])];
 
   if (supplementalUrls.length > 0) {
     logger.info("Collected supplemental SAFER/SMS pages", {
