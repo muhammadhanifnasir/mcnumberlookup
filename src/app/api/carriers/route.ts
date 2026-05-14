@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   deleteAllCarrierRecords,
   deleteCarrierRecordByMcNumber,
+  deleteCarrierRecordsByMcNumbers,
   listCarrierRecordsPaginated,
 } from "@/services/carrier-repository.service";
 import { parseMcNumbers } from "@/utils/mc";
@@ -70,7 +71,8 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const [mcNumber] = parseMcNumbers(mcParam);
+    const mcNumbers = parseMcNumbers(mcParam);
+    const [mcNumber] = mcNumbers;
     if (!mcNumber) {
       return NextResponse.json(
         {
@@ -79,6 +81,14 @@ export async function DELETE(request: Request) {
         },
         { status: 400 },
       );
+    }
+
+    if (mcNumbers.length > 1) {
+      const deleted = await deleteCarrierRecordsByMcNumbers(mcNumbers);
+      return NextResponse.json({
+        success: true,
+        data: { deleted, mcNumbers },
+      });
     }
 
     const deleted = await deleteCarrierRecordByMcNumber(mcNumber);
