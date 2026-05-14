@@ -17,8 +17,8 @@ import { normalizeWebsiteUrl } from "@/utils/normalization";
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
-const SUPPLEMENTAL_PAGE_LIMIT = 3;
-const SUPPLEMENTAL_ALLOWED_SUFFIX = ".fmcsa.dot.gov";
+const SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
+const SUPPLEMENTAL_ALLOWED_DOMAIN = "fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
 function normalizePageText(raw: string | null | undefined) {
@@ -67,10 +67,16 @@ function toAbsoluteHttpUrl(value: string, baseUrl: string): string | undefined {
   }
 }
 
+function isHostWithinDomain(hostname: string, domain: string): boolean {
+  const normalizedHost = hostname.toLowerCase();
+  const normalizedDomain = domain.toLowerCase();
+  return normalizedHost === normalizedDomain || normalizedHost.endsWith(`.${normalizedDomain}`);
+}
+
 function isAllowedSupplementalHost(hostname: string, sourceHostname: string): boolean {
   const normalized = hostname.toLowerCase();
   const normalizedSource = sourceHostname.toLowerCase();
-  return normalized === normalizedSource || normalized.endsWith(SUPPLEMENTAL_ALLOWED_SUFFIX);
+  return normalized === normalizedSource || isHostWithinDomain(normalized, SUPPLEMENTAL_ALLOWED_DOMAIN);
 }
 
 function extractUrlCandidates(value: string): string[] {
@@ -96,12 +102,22 @@ function extractUrlCandidates(value: string): string[] {
     if (candidate) candidates.add(candidate);
   }
 
-  for (const match of trimmed.matchAll(/\/SMS\/Carrier\/\d+\/Overview\.aspx(?:\?[^"'<>\\s]*)?/gi)) {
+  for (const match of trimmed.matchAll(/\/SMS\/Carrier\/\d+\/Overview\.aspx(?:\?[^"'<>\s]*)?/gi)) {
     const candidate = match[0]?.trim();
     if (candidate) candidates.add(candidate);
   }
 
   return [...candidates];
+}
+
+async function extractPageBodyText(page: Page): Promise<string> {
+  const innerText = await page.locator("body").innerText().catch(() => "");
+  const textContent = await page.locator("body").textContent().catch(() => "");
+  const normalizedInnerText = normalizePageText(innerText);
+  const normalizedTextContent = normalizePageText(textContent);
+  return normalizedInnerText.length >= normalizedTextContent.length
+    ? normalizedInnerText
+    : normalizedTextContent;
 }
 
 async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Promise<string[]> {
@@ -148,10 +164,14 @@ async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Prom
     }
   }
 
-  return [...urls].slice(0, SUPPLEMENTAL_PAGE_LIMIT);
+  return [...urls].slice(0, SUPPLEMENTAL_PAGES_PER_CARRIER);
 }
 
-async function collectSupplementalPageData(page: Page, supplementalUrls: string[], mcNumber: string) {
+async function collectSupplementalPageData(
+  page: Page,
+  supplementalUrls: string[],
+  mcNumber: string,
+): Promise<{ texts: string[]; mailtoHrefs: string[]; websiteHrefs: string[] }> {
   const texts: string[] = [];
   const mailtoHrefs: string[] = [];
   const websiteHrefs: string[] = [];
@@ -173,14 +193,7 @@ async function collectSupplementalPageData(page: Page, supplementalUrls: string[
           });
         });
 
-      const innerText = await page.locator("body").innerText().catch(() => "");
-      const textContent = await page.locator("body").textContent().catch(() => "");
-      const normalizedInnerText = normalizePageText(innerText);
-      const normalizedTextContent = normalizePageText(textContent);
-      const bodyText =
-        normalizedInnerText.length >= normalizedTextContent.length
-          ? normalizedInnerText
-          : normalizedTextContent;
+      const bodyText = await extractPageBodyText(page);
       if (bodyText) texts.push(bodyText);
 
       const supplementalMailtoHrefs = await page
@@ -267,14 +280,7 @@ export async function scrapeCarrierByMcWithPage(
       logger.warn("networkidle timeout – proceeding with available content", { mcNumber });
     });
 
-  const innerText = await page.locator("body").innerText().catch(() => "");
-  const textContent = await page.locator("body").textContent().catch(() => "");
-  const normalizedInnerText = normalizePageText(innerText);
-  const normalizedTextContent = normalizePageText(textContent);
-  const bodyText =
-    normalizedInnerText.length >= normalizedTextContent.length
-      ? normalizedInnerText
-      : normalizedTextContent;
+  const bodyText = await extractPageBodyText(page);
 
   if (/no records matching your query were found/i.test(bodyText)) {
     logger.info("Carrier not found in SAFER", { mcNumber });
