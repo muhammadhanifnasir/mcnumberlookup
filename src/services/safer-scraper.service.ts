@@ -17,10 +17,39 @@ import { normalizeWebsiteUrl } from "@/utils/normalization";
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
+const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
 function normalizePageText(raw: string | null | undefined) {
   if (!raw) return "";
   return raw.replace(/\u00a0/g, " ").replace(/\r/g, "").trim();
+}
+
+function isBlockedWebsiteHost(hostname: string) {
+  const normalized = hostname.toLowerCase();
+  for (const blocked of BLOCKED_WEBSITE_HOSTS) {
+    if (normalized === blocked || normalized.endsWith(`.${blocked}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function pickCarrierWebsiteFromHrefs(hrefs: string[]): string | undefined {
+  for (const href of hrefs) {
+    const normalized = normalizeWebsiteUrl(href);
+    if (!normalized) continue;
+
+    try {
+      const parsed = new URL(normalized);
+      if (isBlockedWebsiteHost(parsed.hostname)) continue;
+      return normalized;
+    } catch {
+      continue;
+    }
+  }
+
+  return undefined;
 }
 
 export function buildSaferUrl(mcNumber: string) {
@@ -84,10 +113,33 @@ export async function scrapeCarrierByMcWithPage(
     normalizedInnerText.length >= normalizedTextContent.length
       ? normalizedInnerText
       : normalizedTextContent;
-  const mailtoHref = await page.locator('a[href^="mailto:"]').first().getAttribute("href");
-  const websiteHref = await page.locator('a[href^="http"]').first().getAttribute("href");
-  const emailAddress = extractEmail(bodyText) ?? extractEmailFromMailtoHref(mailtoHref);
-  const website = normalizeWebsiteUrl(websiteHref);
+  const mailtoHrefs = await page
+    .locator('a[href^="mailto:"]')
+    .evaluateAll((anchors) =>
+      anchors
+        .map((anchor) => anchor.getAttribute("href"))
+        .filter((href): href is string => typeof href === "string"),
+    )
+    .catch(() => []);
+  const websiteHrefs = await page
+    .locator('a[href^="http"]')
+    .evaluateAll((anchors) =>
+      anchors
+        .map((anchor) => anchor.getAttribute("href"))
+        .filter((href): href is string => typeof href === "string"),
+    )
+    .catch(() => []);
+
+  const emailAddress =
+    extractEmail(bodyText) ??
+    mailtoHrefs
+      .map((href) => extractEmailFromMailtoHref(href))
+      .find((value): value is string => Boolean(value));
+  const website =
+    pickCarrierWebsiteFromHrefs(websiteHrefs) ??
+    normalizeWebsiteUrl(
+      extractFirstTextField(bodyText, ["Website", "Website Address", "Web Address"]),
+    );
 
   if (/no records matching your query were found/i.test(bodyText)) {
     logger.info("Carrier not found in SAFER", { mcNumber });
