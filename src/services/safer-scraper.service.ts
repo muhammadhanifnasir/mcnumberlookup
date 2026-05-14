@@ -4,10 +4,6 @@ import { chromium, type Browser, type Page } from "playwright-core";
 import type { ScrapedCarrierData } from "@/types/carrier";
 import { logger } from "@/utils/logger";
 import {
-  mapCarrierOperationType,
-  mapOperationClassificationType,
-} from "@/utils/carrier-type-mappers";
-import {
   extractEmail,
   extractEmailFromMailtoHref,
   extractFirstTextField,
@@ -103,37 +99,15 @@ export async function scrapeCarrierByMcWithPage(
     usdotStatus: normalizeStatus(
       extractTextField(bodyText, "USDOT Status") ?? extractTextField(bodyText, "Operating Status"),
     ),
-    ownerStatus: normalizeStatus(
-      extractFirstTextField(bodyText, ["Owner Status", "Entity Type", "Carrier Operation"]),
-    ),
+    ownerStatus: normalizeStatus(extractFirstTextField(bodyText, ["Owner Status", "Entity Type"])),
     usdotNumber: extractTextField(bodyText, "USDOT Number"),
-    mcs150FormDate: extractTextField(bodyText, "MCS-150 Form Date"),
-    operatingAuthorityStatus: normalizeStatus(
-      extractTextField(bodyText, "Operating Authority Status"),
-    ),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
     emailAddress,
     phone: extractPhone(bodyText),
     powerUnits: extractNumber(extractTextField(bodyText, "Power Units")),
     drivers: extractNumber(extractTextField(bodyText, "Drivers")),
-    entityType: extractTextField(bodyText, "Entity Type"),
     physicalAddress: extractTextField(bodyText, "Physical Address"),
-    truckType: extractFirstTextField(bodyText, ["Truck Type", "Vehicle Type", "Cargo Carried"]),
-    mailingAddress: extractTextField(bodyText, "Mailing Address"),
-    operationClassification: mapOperationClassificationType(
-      extractTextField(bodyText, "Operation Classification"),
-    ),
-    carrierOperation: mapCarrierOperationType(
-      extractFirstTextField(bodyText, ["Carrier Operation", "Carrier Operations"]),
-    ),
-    cargoCarried: extractFirstTextField(bodyText, ["Cargo Carried", "Cargo"]),
-    authorityInformation: extractFirstTextField(bodyText, [
-      "Authority Information",
-      "Authority Type",
-      "Authority",
-    ]),
-    outOfServiceDate: extractTextField(bodyText, "Out of Service Date"),
     website,
     enrichmentStatus: "pending",
     dataSource: "fmcsa_safer",
