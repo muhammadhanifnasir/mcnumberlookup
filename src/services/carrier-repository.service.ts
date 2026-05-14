@@ -16,6 +16,8 @@ import {
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
+const MISSING_SCHEMA_COLUMN_REGEX =
+  /Could not find the '([^']+)' column of '([^']+)' in the schema cache/i;
 const CARRIER_SEARCH_FIELDS = [
   "mc_number",
   "usdot_number",
@@ -60,6 +62,20 @@ function parseOptionalInteger(value?: string) {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getMissingSchemaColumn(errorMessage: string) {
+  const match = MISSING_SCHEMA_COLUMN_REGEX.exec(errorMessage);
+  if (!match) return null;
+
+  const [, column, table] = match;
+  return table === CARRIERS_TABLE ? column : null;
+}
+
+function removePayloadColumn<T extends Record<string, unknown>>(payload: T, column: string): T {
+  const next = { ...payload };
+  delete next[column];
+  return next;
 }
 
 export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertPayload {
@@ -165,17 +181,26 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
 
 export async function createCarrierRecord(payload: CarrierInsertPayload) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .insert(payload)
-    .select()
-    .single();
+  let nextPayload = payload;
+  // Handles environments where migrations are not fully applied yet.
+  while (true) {
+    const { data, error } = await supabase
+      .from(CARRIERS_TABLE)
+      .insert(nextPayload)
+      .select()
+      .single();
 
-  if (error) {
-    throw new Error(error.message);
+    if (!error) {
+      return fromSupabaseRow(data);
+    }
+
+    const missingColumn = getMissingSchemaColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message);
+    }
+
+    nextPayload = removePayloadColumn(nextPayload, missingColumn);
   }
-
-  return fromSupabaseRow(data);
 }
 
 export async function updateCarrierRecordByMcNumber(
@@ -183,33 +208,54 @@ export async function updateCarrierRecordByMcNumber(
   payload: CarrierUpdatePayload,
 ) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .update(payload)
-    .eq("mc_number", mcNumber)
-    .select()
-    .single();
+  let nextPayload = payload;
+  // Handles environments where migrations are not fully applied yet.
+  while (true) {
+    const { data, error } = await supabase
+      .from(CARRIERS_TABLE)
+      .update(nextPayload)
+      .eq("mc_number", mcNumber)
+      .select()
+      .single();
 
-  if (error) {
-    throw new Error(error.message);
+    if (!error) {
+      return fromSupabaseRow(data);
+    }
+
+    const missingColumn = getMissingSchemaColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message);
+    }
+
+    nextPayload = removePayloadColumn(nextPayload, missingColumn);
+    if (Object.keys(nextPayload).length === 0) {
+      throw new Error(error.message);
+    }
   }
-
-  return fromSupabaseRow(data);
 }
 
 export async function upsertCarrierRecord(payload: CarrierInsertPayload) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .upsert(payload, { onConflict: "mc_number" })
-    .select()
-    .single();
+  let nextPayload = payload;
+  // Handles environments where migrations are not fully applied yet.
+  while (true) {
+    const { data, error } = await supabase
+      .from(CARRIERS_TABLE)
+      .upsert(nextPayload, { onConflict: "mc_number" })
+      .select()
+      .single();
 
-  if (error) {
-    throw new Error(error.message);
+    if (!error) {
+      return fromSupabaseRow(data);
+    }
+
+    const missingColumn = getMissingSchemaColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message);
+    }
+
+    nextPayload = removePayloadColumn(nextPayload, missingColumn);
   }
-
-  return fromSupabaseRow(data);
 }
 
 export async function getCarrierByMcNumber(mcNumber: string) {
