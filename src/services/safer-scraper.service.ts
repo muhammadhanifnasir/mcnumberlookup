@@ -17,6 +17,8 @@ import { normalizeWebsiteUrl } from "@/utils/normalization";
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
+const SUPPLEMENTAL_PAGE_LIMIT = 3;
+const SUPPLEMENTAL_ALLOWED_SUFFIX = ".fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
 function normalizePageText(raw: string | null | undefined) {
@@ -50,6 +52,166 @@ function pickCarrierWebsiteFromHrefs(hrefs: string[]): string | undefined {
   }
 
   return undefined;
+}
+
+function toAbsoluteHttpUrl(value: string, baseUrl: string): string | undefined {
+  const candidate = value.trim();
+  if (!candidate) return undefined;
+
+  try {
+    const parsed = new URL(candidate, baseUrl);
+    if (!/^https?:$/i.test(parsed.protocol)) return undefined;
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function isAllowedSupplementalHost(hostname: string, sourceHostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  const normalizedSource = sourceHostname.toLowerCase();
+  return normalized === normalizedSource || normalized.endsWith(SUPPLEMENTAL_ALLOWED_SUFFIX);
+}
+
+function extractUrlCandidates(value: string): string[] {
+  const candidates = new Set<string>();
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  if (
+    /^(https?:\/\/|\/\/|\/|\.\.?\/)/i.test(trimmed) ||
+    /Overview\.aspx/i.test(trimmed) ||
+    /\/SMS\/Carrier\//i.test(trimmed)
+  ) {
+    candidates.add(trimmed);
+  }
+
+  for (const match of trimmed.matchAll(/window\.open\(\s*['"]([^'"]+)['"]/gi)) {
+    const candidate = match[1]?.trim();
+    if (candidate) candidates.add(candidate);
+  }
+
+  for (const match of trimmed.matchAll(/https?:\/\/[^\s"'<>]+/gi)) {
+    const candidate = match[0]?.trim();
+    if (candidate) candidates.add(candidate);
+  }
+
+  for (const match of trimmed.matchAll(/\/SMS\/Carrier\/\d+\/Overview\.aspx(?:\?[^"'<>\\s]*)?/gi)) {
+    const candidate = match[0]?.trim();
+    if (candidate) candidates.add(candidate);
+  }
+
+  return [...candidates];
+}
+
+async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Promise<string[]> {
+  const rawCandidates = await page
+    .evaluate(() => {
+      const values: string[] = [];
+
+      document.querySelectorAll("a[href]").forEach((element) => {
+        const href = element.getAttribute("href");
+        if (href) values.push(href);
+      });
+
+      document.querySelectorAll("[onclick]").forEach((element) => {
+        const onClick = element.getAttribute("onclick");
+        if (onClick) values.push(onClick);
+      });
+
+      document.querySelectorAll("script").forEach((script) => {
+        const content = script.textContent;
+        if (content) values.push(content);
+      });
+
+      return values;
+    })
+    .catch(() => []);
+
+  const sourceHostname = new URL(sourceUrl).hostname;
+  const urls = new Set<string>();
+
+  for (const rawCandidate of rawCandidates) {
+    const extractedCandidates = extractUrlCandidates(rawCandidate);
+    for (const candidate of extractedCandidates) {
+      const absoluteUrl = toAbsoluteHttpUrl(candidate, sourceUrl);
+      if (!absoluteUrl) continue;
+
+      try {
+        const parsed = new URL(absoluteUrl);
+        if (!isAllowedSupplementalHost(parsed.hostname, sourceHostname)) continue;
+        if (absoluteUrl === sourceUrl) continue;
+        urls.add(absoluteUrl);
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return [...urls].slice(0, SUPPLEMENTAL_PAGE_LIMIT);
+}
+
+async function collectSupplementalPageData(page: Page, supplementalUrls: string[], mcNumber: string) {
+  const texts: string[] = [];
+  const mailtoHrefs: string[] = [];
+  const websiteHrefs: string[] = [];
+
+  for (const supplementalUrl of supplementalUrls) {
+    try {
+      logger.info("Navigating to supplemental SAFER/SMS page", { mcNumber, supplementalUrl });
+      await page.goto(supplementalUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: GOTO_TIMEOUT_MS,
+      });
+
+      await page
+        .waitForLoadState("networkidle", { timeout: NETWORK_IDLE_TIMEOUT_MS })
+        .catch(() => {
+          logger.warn("networkidle timeout on supplemental page – proceeding", {
+            mcNumber,
+            supplementalUrl,
+          });
+        });
+
+      const innerText = await page.locator("body").innerText().catch(() => "");
+      const textContent = await page.locator("body").textContent().catch(() => "");
+      const normalizedInnerText = normalizePageText(innerText);
+      const normalizedTextContent = normalizePageText(textContent);
+      const bodyText =
+        normalizedInnerText.length >= normalizedTextContent.length
+          ? normalizedInnerText
+          : normalizedTextContent;
+      if (bodyText) texts.push(bodyText);
+
+      const supplementalMailtoHrefs = await page
+        .locator('a[href^="mailto:"]')
+        .evaluateAll((anchors) =>
+          anchors
+            .map((anchor) => anchor.getAttribute("href"))
+            .filter((href): href is string => typeof href === "string"),
+        )
+        .catch(() => []);
+      mailtoHrefs.push(...supplementalMailtoHrefs);
+
+      const supplementalWebsiteHrefs = await page
+        .locator('a[href^="http"]')
+        .evaluateAll((anchors) =>
+          anchors
+            .map((anchor) => anchor.getAttribute("href"))
+            .filter((href): href is string => typeof href === "string"),
+        )
+        .catch(() => []);
+      websiteHrefs.push(...supplementalWebsiteHrefs);
+    } catch (error) {
+      logger.warn("Failed to read supplemental SAFER/SMS page", {
+        mcNumber,
+        supplementalUrl,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return { texts, mailtoHrefs, websiteHrefs };
 }
 
 export function buildSaferUrl(mcNumber: string) {
@@ -113,6 +275,12 @@ export async function scrapeCarrierByMcWithPage(
     normalizedInnerText.length >= normalizedTextContent.length
       ? normalizedInnerText
       : normalizedTextContent;
+
+  if (/no records matching your query were found/i.test(bodyText)) {
+    logger.info("Carrier not found in SAFER", { mcNumber });
+    return null;
+  }
+
   const mailtoHrefs = await page
     .locator('a[href^="mailto:"]')
     .evaluateAll((anchors) =>
@@ -130,21 +298,29 @@ export async function scrapeCarrierByMcWithPage(
     )
     .catch(() => []);
 
+  const supplementalUrls = await discoverSupplementalPageUrls(page, sourceUrl);
+  const supplementalData = await collectSupplementalPageData(page, supplementalUrls, mcNumber);
+  const combinedBodyText = [bodyText, ...supplementalData.texts].join("\n");
+  const combinedMailtoHrefs = [...mailtoHrefs, ...supplementalData.mailtoHrefs];
+  const combinedWebsiteHrefs = [...websiteHrefs, ...supplementalData.websiteHrefs];
+
+  if (supplementalUrls.length > 0) {
+    logger.info("Collected supplemental SAFER/SMS pages", {
+      mcNumber,
+      supplementalPages: supplementalUrls.length,
+    });
+  }
+
   const emailAddress =
-    extractEmail(bodyText) ??
-    mailtoHrefs
+    extractEmail(combinedBodyText) ??
+    combinedMailtoHrefs
       .map((href) => extractEmailFromMailtoHref(href))
       .find((value): value is string => Boolean(value));
   const website =
-    pickCarrierWebsiteFromHrefs(websiteHrefs) ??
+    pickCarrierWebsiteFromHrefs(combinedWebsiteHrefs) ??
     normalizeWebsiteUrl(
-      extractFirstTextField(bodyText, ["Website", "Website Address", "Web Address"]),
+      extractFirstTextField(combinedBodyText, ["Website", "Website Address", "Web Address"]),
     );
-
-  if (/no records matching your query were found/i.test(bodyText)) {
-    logger.info("Carrier not found in SAFER", { mcNumber });
-    return null;
-  }
 
   const data: ScrapedCarrierData = {
     mcNumber,
@@ -156,10 +332,10 @@ export async function scrapeCarrierByMcWithPage(
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
     emailAddress,
-    phone: extractPhone(bodyText),
-    powerUnits: extractNumber(extractTextField(bodyText, "Power Units")),
-    drivers: extractNumber(extractTextField(bodyText, "Drivers")),
-    physicalAddress: extractTextField(bodyText, "Physical Address"),
+    phone: extractPhone(combinedBodyText),
+    powerUnits: extractNumber(extractTextField(combinedBodyText, "Power Units")),
+    drivers: extractNumber(extractTextField(combinedBodyText, "Drivers")),
+    physicalAddress: extractTextField(combinedBodyText, "Physical Address"),
     website,
     enrichmentStatus: "pending",
     dataSource: "fmcsa_safer",
