@@ -3,7 +3,7 @@ import { normalizeEmail, normalizeWebsiteUrl } from "@/utils/normalization";
 const CONTACT_PAGE_TIMEOUT_MS = 12_000;
 const EMAIL_PATTERN =
   /\b[A-Z0-9](?:[A-Z0-9._%+-]{0,62}[A-Z0-9])?@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9-]{2,})+\b/gi;
-const CONTACT_PATHS = ["/contact", "/contact-us", "/about", "/about-us"];
+const CONTACT_PATHS = ["/contact", "/contact-us", "/about", "/about-us", "/ai", "/ai-tools"];
 
 async function fetchHtml(url: string): Promise<string | undefined> {
   const controller = new AbortController();
