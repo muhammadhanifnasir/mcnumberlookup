@@ -16,6 +16,9 @@ import {
 const CARRIERS_TABLE = "carriers";
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
+const MAX_SCHEMA_FALLBACK_ATTEMPTS = 10;
+const MISSING_SCHEMA_COLUMN_REGEX =
+  /Could not find the '([^']+)' column of '([^']+)' in the schema cache/i;
 const CARRIER_SEARCH_FIELDS = [
   "mc_number",
   "usdot_number",
@@ -60,6 +63,70 @@ function parseOptionalInteger(value?: string) {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getMissingSchemaColumn(errorMessage: string) {
+  const match = MISSING_SCHEMA_COLUMN_REGEX.exec(errorMessage);
+  if (!match) return null;
+
+  const [, column, table] = match;
+  return table === CARRIERS_TABLE ? column : null;
+}
+
+function removePayloadColumn<T extends Record<string, unknown>>(payload: T, column: string): T {
+  const next = { ...payload };
+  delete next[column];
+  return next;
+}
+
+type SchemaFallbackPayload = CarrierInsertPayload | CarrierUpdatePayload;
+
+function buildSchemaFallbackFailureMessage(
+  operation: "create" | "update" | "upsert",
+  payload: SchemaFallbackPayload,
+  attempt: number,
+  removedColumns: string[],
+) {
+  if (Object.keys(payload).length === 0) {
+    return `Unable to ${operation} carrier record: no compatible columns remain after removing [${removedColumns.join(", ")}].`;
+  }
+
+  return `Unable to ${operation} carrier record: exceeded fallback attempts (${MAX_SCHEMA_FALLBACK_ATTEMPTS}) after removing [${removedColumns.join(", ")}]. Current attempt count: ${attempt}.`;
+}
+
+async function executeCarrierWriteWithSchemaFallback<TPayload extends SchemaFallbackPayload>(
+  operation: "create" | "update" | "upsert",
+  payload: TPayload,
+  execute: (
+    nextPayload: TPayload,
+  ) => PromiseLike<{ data: CarrierRow | null; error: { message: string } | null }>,
+) {
+  let nextPayload = payload;
+  let attempt = 0;
+  const removedColumns: string[] = [];
+
+  // Handles environments where migrations are not fully applied yet.
+  while (attempt < MAX_SCHEMA_FALLBACK_ATTEMPTS && Object.keys(nextPayload).length > 0) {
+    const { data, error } = await execute(nextPayload);
+
+    if (!error) {
+      if (!data) {
+        throw new Error(`Unable to ${operation} carrier record: no row returned from database.`);
+      }
+      return data;
+    }
+
+    const missingColumn = getMissingSchemaColumn(error.message);
+    if (!missingColumn || !(missingColumn in nextPayload)) {
+      throw new Error(error.message);
+    }
+
+    nextPayload = removePayloadColumn(nextPayload, missingColumn);
+    removedColumns.push(missingColumn);
+    attempt += 1;
+  }
+
+  throw new Error(buildSchemaFallbackFailureMessage(operation, nextPayload, attempt, removedColumns));
 }
 
 export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertPayload {
@@ -165,16 +232,13 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
 
 export async function createCarrierRecord(payload: CarrierInsertPayload) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .insert(payload)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  const data = await executeCarrierWriteWithSchemaFallback("create", payload, (nextPayload) =>
+    supabase
+      .from(CARRIERS_TABLE)
+      .insert(nextPayload)
+      .select()
+      .single(),
+  );
   return fromSupabaseRow(data);
 }
 
@@ -183,32 +247,26 @@ export async function updateCarrierRecordByMcNumber(
   payload: CarrierUpdatePayload,
 ) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .update(payload)
-    .eq("mc_number", mcNumber)
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  const data = await executeCarrierWriteWithSchemaFallback("update", payload, (nextPayload) =>
+    supabase
+      .from(CARRIERS_TABLE)
+      .update(nextPayload)
+      .eq("mc_number", mcNumber)
+      .select()
+      .single(),
+  );
   return fromSupabaseRow(data);
 }
 
 export async function upsertCarrierRecord(payload: CarrierInsertPayload) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from(CARRIERS_TABLE)
-    .upsert(payload, { onConflict: "mc_number" })
-    .select()
-    .single();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  const data = await executeCarrierWriteWithSchemaFallback("upsert", payload, (nextPayload) =>
+    supabase
+      .from(CARRIERS_TABLE)
+      .upsert(nextPayload, { onConflict: "mc_number" })
+      .select()
+      .single(),
+  );
   return fromSupabaseRow(data);
 }
 
