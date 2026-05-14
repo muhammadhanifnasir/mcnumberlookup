@@ -17,6 +17,7 @@ import { normalizeWebsiteUrl } from "@/utils/normalization";
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
+// Keep supplemental page crawling bounded to control latency during batch imports.
 const MAX_SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
 const SUPPLEMENTAL_ALLOWED_DOMAIN = "fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
@@ -215,7 +216,7 @@ async function collectSupplementalPageData(
       mailtoHrefs.push(...supplementalMailtoHrefs);
 
       const supplementalWebsiteHrefs = await page
-        .locator('a[href^="http"]')
+        .locator('a[href^="http://"], a[href^="https://"]')
         .evaluateAll((anchors) =>
           anchors
             .map((anchor) => anchor.getAttribute("href"))
@@ -290,6 +291,7 @@ export async function scrapeCarrierByMcWithPage(
 
   const bodyText = await extractPageBodyText(page);
 
+  // Exit early when carrier is missing so we avoid unnecessary supplemental-page navigation.
   if (/no records matching your query were found/i.test(bodyText)) {
     logger.info("Carrier not found in SAFER", { mcNumber });
     return null;
@@ -304,7 +306,7 @@ export async function scrapeCarrierByMcWithPage(
     )
     .catch(() => []);
   const websiteHrefs = await page
-    .locator('a[href^="http"]')
+    .locator('a[href^="http://"], a[href^="https://"]')
     .evaluateAll((anchors) =>
       anchors
         .map((anchor) => anchor.getAttribute("href"))
