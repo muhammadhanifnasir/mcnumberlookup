@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { Eye, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
+import { Download, Eye, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
 
 import { CarrierDetailsModal } from "@/components/carriers/carrier-details-modal";
 import { StatusBadge } from "@/components/carriers/status-badge";
@@ -25,6 +25,47 @@ type CarrierListResponse = {
 };
 
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
+const EXPORT_PAGE_SIZE = 200;
+
+const EXPORT_HEADERS: Array<{ label: string; value: (record: CarrierRecord) => string | number | null | undefined }> = [
+  { label: "MC Number", value: (record) => record.mcNumber },
+  { label: "USDOT Number", value: (record) => record.usdotNumber },
+  { label: "Legal Name", value: (record) => record.legalName },
+  { label: "DBA Name", value: (record) => record.dbaName },
+  { label: "Owner Status", value: (record) => record.ownerStatus },
+  { label: "Email", value: (record) => record.emailAddress },
+  { label: "Website", value: (record) => record.website },
+  { label: "Phone", value: (record) => record.phone },
+  { label: "Power Units", value: (record) => record.powerUnits },
+  { label: "Drivers", value: (record) => record.drivers },
+  { label: "Physical Address", value: (record) => record.physicalAddress },
+  { label: "Equipment Type", value: (record) => record.equipmentType },
+  { label: "Truck Type", value: (record) => record.truckType },
+  { label: "Fleet Category", value: (record) => record.fleetSizeCategory },
+  { label: "Inferred Type", value: (record) => record.inferredTruckType },
+  { label: "USDOT Status", value: (record) => record.usdotStatus },
+  { label: "Import Status", value: (record) => record.importStatus },
+  { label: "Enrichment Status", value: (record) => record.enrichmentStatus },
+  { label: "Import Error", value: (record) => record.importError },
+  { label: "Created At", value: (record) => record.scrapedAt },
+];
+
+function toCsvCell(value: string | number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  const raw = String(value);
+  const escaped = raw.replace(/"/g, "\"\"");
+  return /[",\n\r]/.test(escaped) ? `"${escaped}"` : escaped;
+}
+
+function buildCarrierExportCsv(rows: CarrierRecord[]) {
+  const headerRow = EXPORT_HEADERS.map((header) => toCsvCell(header.label)).join(",");
+  const dataRows = rows.map((row) => EXPORT_HEADERS.map((header) => toCsvCell(header.value(row))).join(","));
+
+  return [headerRow, ...dataRows].join("\n");
+}
 
 function InfoBadge({ value }: { value?: string }) {
   return (
@@ -49,6 +90,7 @@ export function CarriersDashboard() {
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierRecord | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
+  const [downloading, setDownloading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -146,6 +188,56 @@ export function CarriersDashboard() {
       setDeletingAll(false);
     }
   }, [confirmDeleteAll, loadData]);
+
+  const downloadCarrierResults = useCallback(async () => {
+    try {
+      setDownloading(true);
+      setError(null);
+
+      const allRecords: CarrierRecord[] = [];
+      let nextPage = 1;
+      let totalPages = 1;
+
+      while (nextPage <= totalPages) {
+        const params = new URLSearchParams({
+          page: String(nextPage),
+          pageSize: String(EXPORT_PAGE_SIZE),
+        });
+        if (search.trim()) {
+          params.set("search", search.trim());
+        }
+
+        const response = await fetch(`/api/carriers?${params.toString()}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+        const payload = await readApiResponse<CarrierListResponse>(response);
+        const pageRecords = payload.data ?? [];
+        allRecords.push(...pageRecords);
+        totalPages = payload.pagination?.totalPages ?? 0;
+        nextPage += 1;
+      }
+
+      if (allRecords.length === 0) {
+        throw new Error("No carrier results available to download.");
+      }
+
+      const csv = buildCarrierExportCsv(allRecords);
+      const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+      const objectUrl = URL.createObjectURL(blob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = objectUrl;
+      downloadLink.download = `carrier-results-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(objectUrl);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : "Failed to download carrier results.");
+    } finally {
+      setDownloading(false);
+    }
+  }, [search]);
 
   const columns = useMemo<ColumnDef<CarrierRecord>[]>(
     () => [
@@ -320,6 +412,15 @@ export function CarriersDashboard() {
             <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void downloadCarrierResults()}
+              disabled={loading || downloading}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {downloading ? "Downloading..." : "Download Excel"}
             </Button>
             <Button
               type="button"
