@@ -370,6 +370,24 @@ export async function deleteCarrierRecordByMcNumber(mcNumber: string) {
   return count ?? 0;
 }
 
+export async function deleteCarrierRecordsByMcNumbers(mcNumbers: string[]) {
+  if (mcNumbers.length === 0) {
+    return 0;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error, count } = await supabase
+    .from(CARRIERS_TABLE)
+    .delete({ count: "exact" })
+    .in("mc_number", mcNumbers);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
 export async function deleteAllCarrierRecords() {
   const supabase = createSupabaseAdminClient();
   const { error, count } = await supabase

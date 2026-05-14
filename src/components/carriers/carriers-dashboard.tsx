@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, RowSelectionState, SortingState } from "@tanstack/react-table";
 import { Download, Eye, RefreshCcw, RotateCcw, Trash2 } from "lucide-react";
 
 import { CarrierDetailsModal } from "@/components/carriers/carrier-details-modal";
@@ -11,6 +11,7 @@ import { Pagination } from "@/components/common/pagination";
 import { SearchBar } from "@/components/common/search-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
 
@@ -87,10 +88,18 @@ export function CarriersDashboard() {
   const [totalPages, setTotalPages] = useState(0);
   const [retryingMc, setRetryingMc] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierRecord | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
   const [downloading, setDownloading] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const getCarrierRowId = useCallback(
+    (row: CarrierRecord) => row.id ?? `${row.mcNumber}-${row.scrapedAt}`,
+    [],
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -148,6 +157,29 @@ export function CarriersDashboard() {
     return () => window.clearTimeout(timeout);
   }, [confirmDeleteAll]);
 
+  useEffect(() => {
+    if (!confirmDeleteSelected) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setConfirmDeleteSelected(false);
+    }, CONFIRM_DELETE_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [confirmDeleteSelected]);
+
+  useEffect(() => {
+    setRowSelection({});
+    setConfirmDeleteSelected(false);
+  }, [records]);
+
+  const selectedRecords = useMemo(
+    () => records.filter((record) => rowSelection[getCarrierRowId(record)]),
+    [getCarrierRowId, records, rowSelection],
+  );
+  const selectedCount = selectedRecords.length;
+
   const retryImport = useCallback(async (mcNumber: string) => {
     try {
       setRetryingMc(mcNumber);
@@ -165,6 +197,53 @@ export function CarriersDashboard() {
     }
   }, [loadData]);
 
+  const refreshPage = useCallback(
+    async (nextPage: number) => {
+      if (nextPage !== page) {
+        setPage(nextPage);
+        return;
+      }
+
+      await loadData();
+    },
+    [loadData, page],
+  );
+
+  const deleteSelectedCarriers = useCallback(async () => {
+    if (selectedCount === 0) {
+      return;
+    }
+
+    if (!confirmDeleteSelected) {
+      setConfirmDeleteSelected(true);
+      return;
+    }
+
+    const mcNumbers = selectedRecords.map((record) => record.mcNumber);
+
+    try {
+      setDeletingSelected(true);
+      setError(null);
+      setConfirmDeleteSelected(false);
+
+      const params = new URLSearchParams({ mcNumber: mcNumbers.join(",") });
+      const response = await fetch(`/api/carriers?${params.toString()}`, { method: "DELETE" });
+      await readApiResponse(response);
+
+      setSelectedCarrier((current) =>
+        current && mcNumbers.includes(current.mcNumber) ? null : current,
+      );
+      setRowSelection({});
+
+      const nextPage = page > 1 && selectedCount >= records.length ? page - 1 : page;
+      await refreshPage(nextPage);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete selected carriers.");
+    } finally {
+      setDeletingSelected(false);
+    }
+  }, [confirmDeleteSelected, page, records.length, refreshPage, selectedCount, selectedRecords]);
+
   const deleteAllCarriers = useCallback(async () => {
     if (!confirmDeleteAll) {
       setConfirmDeleteAll(true);
@@ -180,14 +259,14 @@ export function CarriersDashboard() {
       await readApiResponse(response);
 
       setSelectedCarrier(null);
-      setPage(1);
-      await loadData();
+      setRowSelection({});
+      await refreshPage(1);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete carriers.");
     } finally {
       setDeletingAll(false);
     }
-  }, [confirmDeleteAll, loadData]);
+  }, [confirmDeleteAll, refreshPage]);
 
   const downloadCarrierResults = useCallback(async () => {
     try {
@@ -241,6 +320,24 @@ export function CarriersDashboard() {
 
   const columns = useMemo<ColumnDef<CarrierRecord>[]>(
     () => [
+      {
+        id: "select",
+        enableSorting: false,
+        header: ({ table }) => (
+          <Checkbox
+            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
+            aria-label="Select all carriers on this page"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
+            aria-label={`Select carrier MC ${row.original.mcNumber}`}
+          />
+        ),
+      },
       {
         accessorKey: "mcNumber",
         header: "MC Number",
@@ -408,7 +505,10 @@ export function CarriersDashboard() {
           <div className="w-full lg:max-w-md">
             <SearchBar value={searchInput} onChange={setSearchInput} disabled={loading} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {selectedCount > 0 ? (
+              <span className="text-sm font-medium text-muted-foreground">{selectedCount} selected</span>
+            ) : null}
             <Button type="button" variant="outline" onClick={() => void loadData()} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               Refresh
@@ -421,6 +521,24 @@ export function CarriersDashboard() {
             >
               <Download className="mr-2 h-4 w-4" />
               {downloading ? "Downloading..." : "Download Excel"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void deleteSelectedCarriers()}
+              disabled={loading || deletingSelected || selectedCount === 0}
+              aria-label={
+                confirmDeleteSelected
+                  ? `Click again to confirm deletion of ${selectedCount} selected carriers`
+                  : `Delete ${selectedCount} selected carriers`
+              }
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {deletingSelected
+                ? "Deleting Selected..."
+                : confirmDeleteSelected
+                  ? `Confirm Delete (${selectedCount})`
+                  : `Delete Selected (${selectedCount})`}
             </Button>
             <Button
               type="button"
@@ -445,16 +563,29 @@ export function CarriersDashboard() {
           onErrorRetry={() => void loadData()}
           emptyTitle="No carriers imported yet"
           emptyDescription="Import carriers from the Carrier Import page to see results here."
-          getRowId={(row) => row.id ?? `${row.mcNumber}-${row.scrapedAt}`}
-          mobileCard={(row) => (
-            <div className="space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-card-foreground">MC {row.mcNumber}</p>
-                  <p className="text-xs text-muted-foreground">{row.legalName ?? row.dbaName ?? "-"}</p>
+          getRowId={getCarrierRowId}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+          mobileCard={(tableRow) => {
+            const row = tableRow.original;
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={tableRow.getIsSelected()}
+                      onCheckedChange={(value) => tableRow.toggleSelected(Boolean(value))}
+                      aria-label={`Select carrier MC ${row.mcNumber}`}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-card-foreground">MC {row.mcNumber}</p>
+                      <p className="text-xs text-muted-foreground">{row.legalName ?? row.dbaName ?? "-"}</p>
+                    </div>
+                  </div>
+                  <StatusBadge status={row.importStatus} kind="import" />
                 </div>
-                <StatusBadge status={row.importStatus} kind="import" />
-              </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <div>USDOT: {row.usdotNumber ?? "-"}</div>
                   <div>Owner: {row.ownerStatus ?? "-"}</div>
@@ -469,35 +600,36 @@ export function CarriersDashboard() {
                   <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
                   <div className="col-span-2">Error: {row.importError ?? "-"}</div>
                 </div>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={row.usdotStatus} kind="usdot" />
-                  <StatusBadge status={row.enrichmentStatus} kind="enrichment" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 px-2 text-xs"
-                    onClick={() => setSelectedCarrier(row)}
-                  >
-                    View
-                  </Button>
-                  {row.importStatus === "failed" ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={row.usdotStatus} kind="usdot" />
+                    <StatusBadge status={row.enrichmentStatus} kind="enrichment" />
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       className="h-8 px-2 text-xs"
-                      onClick={() => void retryImport(row.mcNumber)}
-                      disabled={retryingMc === row.mcNumber}
+                      onClick={() => setSelectedCarrier(row)}
                     >
-                      Retry
+                      View
                     </Button>
-                  ) : null}
+                    {row.importStatus === "failed" ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => void retryImport(row.mcNumber)}
+                        disabled={retryingMc === row.mcNumber}
+                      >
+                        Retry
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          }}
         />
 
         <Pagination

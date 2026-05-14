@@ -7,6 +7,8 @@ import {
   getSortedRowModel,
   type ColumnDef,
   type OnChangeFn,
+  type Row,
+  type RowSelectionState,
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
@@ -26,7 +28,9 @@ type DataTableProps<TData> = {
   emptyTitle?: string;
   emptyDescription?: string;
   getRowId?: (row: TData, index: number) => string;
-  mobileCard?: (row: TData) => ReactNode;
+  mobileCard?: (row: Row<TData>) => ReactNode;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 };
 
 export function DataTable<TData>({
@@ -41,12 +45,16 @@ export function DataTable<TData>({
   emptyDescription = "Try adjusting your filters or import more data.",
   getRowId,
   mobileCard,
+  rowSelection,
+  onRowSelectionChange,
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
     columns,
-    state: { sorting },
+    state: { sorting, rowSelection },
     onSortingChange,
+    onRowSelectionChange,
+    enableRowSelection: Boolean(onRowSelectionChange),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
@@ -156,7 +164,7 @@ export function DataTable<TData>({
         ) : rows.length > 0 && mobileCard ? (
           rows.map((row) => (
             <div key={row.id} className="rounded-xl border border-border bg-card p-4">
-              {mobileCard(row.original)}
+              {mobileCard(row)}
             </div>
           ))
         ) : (
