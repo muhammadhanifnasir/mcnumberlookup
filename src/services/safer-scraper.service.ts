@@ -75,6 +75,14 @@ function toAbsoluteHttpUrl(value: string, baseUrl: string): string | undefined {
   }
 }
 
+function extractUsdotNumber(text: string): string | undefined {
+  const labeledValue = extractTextField(text, "USDOT Number");
+  const exactNumber = labeledValue?.match(/\b\d+\b/)?.[0];
+  if (exactNumber) return exactNumber;
+
+  return text.match(/USDOT\s*Number\s*:?\s*(\d+)/i)?.[1];
+}
+
 function isHostWithinDomain(hostname: string, domain: string): boolean {
   const normalizedHost = hostname.toLowerCase();
   const normalizedDomain = domain.toLowerCase();
@@ -513,7 +521,7 @@ export async function scrapeCarrierByMcWithPage(
       extractTextField(bodyText, "USDOT Status") ?? extractTextField(bodyText, "Operating Status"),
     ),
     ownerStatus: normalizeStatus(extractFirstTextField(bodyText, ["Owner Status", "Entity Type"])),
-    usdotNumber: extractTextField(bodyText, "USDOT Number"),
+    usdotNumber: extractUsdotNumber(bodyText),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
     emailAddress,

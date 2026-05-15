@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/carriers/status-badge";
 
 const columns = [
   { key: "mc", label: "MC" },
-  { key: "usdot", label: "USDOT" },
+  { key: "usdot", label: "USDOT Number" },
   { key: "name", label: "Carrier" },
   { key: "ownerStatus", label: "Owner Status" },
   { key: "email", label: "Email" },
