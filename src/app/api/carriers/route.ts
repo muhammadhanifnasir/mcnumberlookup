@@ -7,7 +7,6 @@ import {
   listCarrierRecordsPaginated,
 } from "@/services/carrier-repository.service";
 import { parseMcNumbers } from "@/utils/mc";
-import { mapImportStatus } from "@/utils/carrier-type-mappers";
 
 export const runtime = "nodejs";
 
@@ -19,14 +18,12 @@ export async function GET(request: Request) {
     const page = Number.parseInt(pageParam ?? "1", 10);
     const pageSize = Number.parseInt(pageSizeParam ?? "50", 10);
     const search = searchParams.get("search") ?? undefined;
-    const importStatus = searchParams.get("importStatus") ?? undefined;
     const usdotStatus = searchParams.get("usdotStatus") ?? undefined;
 
     const result = await listCarrierRecordsPaginated({
       page: Number.isFinite(page) ? page : 1,
       pageSize: Number.isFinite(pageSize) ? pageSize : 50,
       search,
-      importStatus: mapImportStatus(importStatus),
       usdotStatus,
     });
 
