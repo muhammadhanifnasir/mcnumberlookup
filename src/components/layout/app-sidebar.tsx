@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Database, SearchCheck } from "lucide-react";
+import { Database, Hash, SearchCheck } from "lucide-react";
 
 import { APP_NAME } from "@/utils/constants";
 
 const navItems = [
   { title: "Carrier Import", href: "/carrier-import", icon: SearchCheck },
   { title: "Carriers", href: "/carriers", icon: Database },
+  { title: "USDOT Numbers", href: "/usdot-numbers", icon: Hash },
 ];
 
 export function AppSidebar() {
