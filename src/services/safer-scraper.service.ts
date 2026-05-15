@@ -92,6 +92,7 @@ function extractUrlCandidates(value: string): string[] {
   if (
     /^(https?:\/\/|\/\/|\/|\.\.?\/)/i.test(trimmed) ||
     /Overview\.aspx/i.test(trimmed) ||
+    /CarrierRegistration\.aspx/i.test(trimmed) ||
     /\/SMS\/Carrier\//i.test(trimmed)
   ) {
     candidates.add(trimmed);
@@ -112,7 +113,19 @@ function extractUrlCandidates(value: string): string[] {
     if (candidate) candidates.add(candidate);
   }
 
+  for (const match of trimmed.matchAll(/\/SMS\/Carrier\/\d+\/CarrierRegistration\.aspx(?:\?[^"'<>\s]*)?/gi)) {
+    const candidate = match[0]?.trim();
+    if (candidate) candidates.add(candidate);
+  }
+
   return [...candidates];
+}
+
+function getSupplementalUrlPriorityScore(url: string): number {
+  if (/\/SMS\/Carrier\/\d+\/CarrierRegistration\.aspx/i.test(url)) return 0;
+  if (/\/SMS\/Carrier\/\d+\/Overview\.aspx/i.test(url)) return 1;
+  if (/\/SMS\/Carrier\//i.test(url)) return 2;
+  return 3;
 }
 
 async function extractPageBodyText(page: Page): Promise<string> {
@@ -169,7 +182,11 @@ async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Prom
     }
   }
 
-  const discoveredUrls = [...urls];
+  const discoveredUrls = [...urls].sort((a, b) => {
+    const scoreDiff = getSupplementalUrlPriorityScore(a) - getSupplementalUrlPriorityScore(b);
+    if (scoreDiff !== 0) return scoreDiff;
+    return a.localeCompare(b);
+  });
   if (discoveredUrls.length > MAX_SUPPLEMENTAL_PAGES_PER_CARRIER) {
     logger.info("Limiting supplemental SAFER/SMS pages", {
       discovered: discoveredUrls.length,
