@@ -307,7 +307,7 @@ async function collectPopupSupplementalPageData(
           const haystack = [entry.text, entry.href, entry.onClick, entry.value].filter(Boolean).join(" ");
           return (
             /carrier registration|sms|overview/i.test(haystack) ||
-            /window\.open|carrieregistration\.aspx|overview\.aspx|\/sms\/carrier\//i.test(haystack)
+            /window\.open|carrierregistration\.aspx|overview\.aspx|\/sms\/carrier\//i.test(haystack)
           );
         })
         .slice(0, 10),
