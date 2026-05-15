@@ -24,6 +24,7 @@ const NETWORK_IDLE_TIMEOUT_MS = 15_000;
 const POPUP_WAIT_TIMEOUT_MS = 4_000;
 // Keep supplemental page crawling bounded to control latency during batch imports.
 const MAX_SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
+const MAX_POPUP_CLICK_TARGETS = 10;
 const SUPPLEMENTAL_ALLOWED_DOMAIN = "fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
@@ -160,7 +161,7 @@ async function extractPageLinkHrefs(page: Page): Promise<{ mailtoHrefs: string[]
   return { mailtoHrefs, websiteHrefs };
 }
 
-function isLikelyPopupSupplementalCandidate(value: string | null | undefined): boolean {
+function isPopupTriggerAttribute(value: string | null | undefined): boolean {
   const candidate = value?.trim();
   if (!candidate) return false;
   return (
@@ -304,13 +305,17 @@ async function collectPopupSupplementalPageData(
           return { tagName, text, href, onClick, target, id, name, value, index };
         })
         .filter((entry) => {
-          const haystack = [entry.text, entry.href, entry.onClick, entry.value].filter(Boolean).join(" ");
+          const searchableText = [entry.text, entry.href, entry.onClick, entry.value]
+            .filter(Boolean)
+            .join(" ");
           return (
-            /carrier registration|sms|overview/i.test(haystack) ||
-            /window\.open|carrierregistration\.aspx|overview\.aspx|\/sms\/carrier\//i.test(haystack)
+            /carrier registration|sms|overview/i.test(searchableText) ||
+            /window\.open|carrierregistration\.aspx|overview\.aspx|\/sms\/carrier\//i.test(
+              searchableText,
+            )
           );
         })
-        .slice(0, 10),
+        .slice(0, MAX_POPUP_CLICK_TARGETS),
     )
     .catch(() => []);
 
@@ -322,8 +327,8 @@ async function collectPopupSupplementalPageData(
     if (!element) continue;
 
     const hasPopupSignal =
-      isLikelyPopupSupplementalCandidate(target.onClick) ||
-      isLikelyPopupSupplementalCandidate(target.href) ||
+      isPopupTriggerAttribute(target.onClick) ||
+      isPopupTriggerAttribute(target.href) ||
       /^_blank$/i.test(target.target ?? "");
     if (!hasPopupSignal) continue;
 
