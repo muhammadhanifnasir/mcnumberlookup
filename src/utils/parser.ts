@@ -20,11 +20,14 @@ export function extractFirstTextField(text: string, labels: string[]): string | 
   return undefined;
 }
 
+// SAFER labels are short descriptors (for example, "Physical Address" and "USDOT Status");
+// keeping this bounded avoids over-matching long free-form lines as labels.
 const LABELED_FIELD_MAX_LABEL_LENGTH = 40;
+const LABELED_FIELD_ALLOWED_CHAR_CLASS = "A-Za-z0-9/&().,' -";
 
 function isLikelyLabeledFieldLine(line: string): boolean {
   return new RegExp(
-    `^[A-Za-z][A-Za-z0-9/&().,' -]{1,${LABELED_FIELD_MAX_LABEL_LENGTH}}\\s*:\\s*\\S`,
+    `^[A-Za-z][${LABELED_FIELD_ALLOWED_CHAR_CLASS}]{1,${LABELED_FIELD_MAX_LABEL_LENGTH}}\\s*:\\s*\\S`,
   ).test(line);
 }
 
