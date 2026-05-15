@@ -5,11 +5,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { buildSaferUrl } from "@/services/safer-scraper.service";
 import {
   mapCarrierOperationType,
-  mapEnrichmentStatus,
-  mapEquipmentType,
   mapFleetSizeCategory,
-  mapImportStatus,
-  mapInferredTruckType,
   mapOperationClassificationType,
 } from "@/utils/carrier-type-mappers";
 
@@ -25,17 +21,12 @@ const CARRIER_SEARCH_FIELDS = [
   "legal_name",
   "dba_name",
   "owner_status",
-  "email_address",
-  "website",
   "physical_address",
   "truck_type",
-  "equipment_type",
   "cargo_carried",
   "operation_classification",
   "carrier_operation",
   "fleet_size_category",
-  "inferred_truck_type",
-  "enrichment_status",
 ] as const;
 type CarrierRow = Database["public"]["Tables"]["carriers"]["Row"];
 export type CarrierInsertPayload = Database["public"]["Tables"]["carriers"]["Insert"];
@@ -45,7 +36,6 @@ export type CarrierListOptions = {
   page?: number;
   pageSize?: number;
   search?: string;
-  importStatus?: CarrierRecord["importStatus"];
   usdotStatus?: string;
 };
 
@@ -139,23 +129,17 @@ export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertP
     operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
     dba_name: record.dbaName ?? null,
-    email_address: record.emailAddress ?? null,
     phone: record.phone ?? null,
     power_units: parseOptionalInteger(record.powerUnits),
     drivers: parseOptionalInteger(record.drivers),
     physical_address: record.physicalAddress ?? null,
     truck_type: record.truckType ?? null,
-    website: record.website ?? null,
-    equipment_type: record.equipmentType ?? null,
     cargo_carried: record.cargoCarried ?? null,
     operation_classification: record.operationClassification ?? null,
     carrier_operation: record.carrierOperation ?? null,
     authority_information: record.authorityInformation ?? null,
     fleet_size_category: record.fleetSizeCategory ?? null,
-    inferred_truck_type: record.inferredTruckType ?? null,
     data_source: record.dataSource ?? null,
-    enrichment_status: record.enrichmentStatus ?? null,
-    import_status: record.importStatus,
     created_at: record.scrapedAt,
   };
 }
@@ -172,14 +156,11 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   }
   if (record.legalName !== undefined) payload.legal_name = record.legalName ?? null;
   if (record.dbaName !== undefined) payload.dba_name = record.dbaName ?? null;
-  if (record.emailAddress !== undefined) payload.email_address = record.emailAddress ?? null;
   if (record.phone !== undefined) payload.phone = record.phone ?? null;
   if (record.powerUnits !== undefined) payload.power_units = parseOptionalInteger(record.powerUnits);
   if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
   if (record.physicalAddress !== undefined) payload.physical_address = record.physicalAddress ?? null;
   if (record.truckType !== undefined) payload.truck_type = record.truckType ?? null;
-  if (record.website !== undefined) payload.website = record.website ?? null;
-  if (record.equipmentType !== undefined) payload.equipment_type = record.equipmentType ?? null;
   if (record.cargoCarried !== undefined) payload.cargo_carried = record.cargoCarried ?? null;
   if (record.operationClassification !== undefined) {
     payload.operation_classification = record.operationClassification ?? null;
@@ -189,10 +170,7 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
     payload.authority_information = record.authorityInformation ?? null;
   }
   if (record.fleetSizeCategory !== undefined) payload.fleet_size_category = record.fleetSizeCategory ?? null;
-  if (record.inferredTruckType !== undefined) payload.inferred_truck_type = record.inferredTruckType ?? null;
   if (record.dataSource !== undefined) payload.data_source = record.dataSource ?? null;
-  if (record.enrichmentStatus !== undefined) payload.enrichment_status = record.enrichmentStatus ?? null;
-  if (record.importStatus !== undefined) payload.import_status = record.importStatus;
 
   return payload;
 }
@@ -208,23 +186,18 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     operatingAuthorityStatus: row.operating_authority_status ?? undefined,
     legalName: row.legal_name ?? undefined,
     dbaName: row.dba_name ?? undefined,
-    emailAddress: row.email_address ?? undefined,
     phone: row.phone ?? undefined,
     powerUnits: row.power_units !== null ? String(row.power_units) : undefined,
     drivers: row.drivers !== null ? String(row.drivers) : undefined,
     physicalAddress: row.physical_address ?? undefined,
     truckType: row.truck_type ?? undefined,
-    website: row.website ?? undefined,
-    equipmentType: mapEquipmentType(row.equipment_type),
     cargoCarried: row.cargo_carried ?? undefined,
     operationClassification: mapOperationClassificationType(row.operation_classification),
     carrierOperation: mapCarrierOperationType(row.carrier_operation),
     authorityInformation: row.authority_information ?? undefined,
     fleetSizeCategory: mapFleetSizeCategory(row.fleet_size_category),
-    inferredTruckType: mapInferredTruckType(row.inferred_truck_type),
     dataSource: row.data_source ?? undefined,
-    enrichmentStatus: mapEnrichmentStatus(row.enrichment_status),
-    importStatus: mapImportStatus(row.import_status) ?? "failed",
+    importStatus: "imported",
     sourceUrl: buildSaferUrl(row.mc_number),
     scrapedAt: row.created_at,
   };
@@ -305,10 +278,6 @@ export async function listCarrierRecordsPaginated(
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  if (options.importStatus) {
-    query = query.eq("import_status", options.importStatus);
-  }
-
   if (options.usdotStatus) {
     query = query.eq("usdot_status", options.usdotStatus);
   }
@@ -345,7 +314,6 @@ export async function listCarrierRetryCandidates(limit = 100) {
   const { data, error } = await supabase
     .from(CARRIERS_TABLE)
     .select("*")
-    .eq("import_status", "failed")
     .order("updated_at", { ascending: true })
     .limit(limit);
 
