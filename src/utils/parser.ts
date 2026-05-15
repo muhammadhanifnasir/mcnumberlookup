@@ -20,6 +20,58 @@ export function extractFirstTextField(text: string, labels: string[]): string | 
   return undefined;
 }
 
+// SAFER labels are short descriptors (for example, "Physical Address" and "USDOT Status");
+// keeping this bounded avoids over-matching long free-form lines as labels.
+const LABELED_FIELD_MAX_LABEL_LENGTH = 40;
+const LABELED_FIELD_ALLOWED_CHAR_CLASS = "A-Za-z0-9/&().,' -";
+const LABELED_FIELD_LINE_PATTERN = new RegExp(
+  `^[A-Za-z][${LABELED_FIELD_ALLOWED_CHAR_CLASS}]{1,${LABELED_FIELD_MAX_LABEL_LENGTH}}\\s*:\\s*\\S`,
+);
+const MULTI_LINE_FIELD_PATTERN_CACHE = new Map<string, RegExp>();
+
+function isLikelyLabeledFieldLine(line: string): boolean {
+  return LABELED_FIELD_LINE_PATTERN.test(line);
+}
+
+export function extractMultiLineTextField(
+  text: string,
+  label: string,
+  maxLines: number = 2,
+): string | undefined {
+  if (maxLines < 1) return undefined;
+
+  let pattern = MULTI_LINE_FIELD_PATTERN_CACHE.get(label);
+  if (!pattern) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    pattern = new RegExp(`^\\s*${escaped}\\s*:?\\s*(.*)$`, "i");
+    MULTI_LINE_FIELD_PATTERN_CACHE.set(label, pattern);
+  }
+  const lines = text.split("\n");
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    const match = line.match(pattern);
+    if (!match) continue;
+
+    const parts: string[] = [];
+    const firstValue = match[1]?.trim();
+    if (firstValue) parts.push(firstValue);
+
+    let nextIndex = lineIndex + 1;
+    while (parts.length < maxLines && nextIndex < lines.length) {
+      const nextLine = lines[nextIndex]?.trim();
+      if (!nextLine) break;
+      if (isLikelyLabeledFieldLine(nextLine)) break;
+      parts.push(nextLine);
+      nextIndex++;
+    }
+
+    return parts.length > 0 ? parts.join(", ") : undefined;
+  }
+
+  return undefined;
+}
+
 /**
  * Normalises a status string by collapsing whitespace.
  */
