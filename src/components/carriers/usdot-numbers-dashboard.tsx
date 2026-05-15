@@ -106,8 +106,8 @@ export function UsdotNumbersDashboard() {
         {!loading ? (
           <>
             <TableShell columns={columns} emptyMessage="No USDOT number records found.">
-              {records.map((record) => (
-                <tr key={record.id ?? `${record.mcNumber}-${record.scrapedAt}`}>
+              {records.map((record, index) => (
+                <tr key={record.id ?? `${record.mcNumber}-${record.scrapedAt}-${index}`}>
                   <td className="whitespace-nowrap px-4 py-3 font-medium text-card-foreground">
                     MC {record.mcNumber}
                   </td>
