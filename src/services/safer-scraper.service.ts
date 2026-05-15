@@ -2,6 +2,10 @@ import chromiumBinary from "@sparticuz/chromium";
 import { chromium, type Browser, type Page } from "playwright-core";
 
 import type { ScrapedCarrierData } from "@/types/carrier";
+import {
+  mapCarrierOperationType,
+  mapOperationClassificationType,
+} from "@/utils/carrier-type-mappers";
 import { logger } from "@/utils/logger";
 import {
   extractEmail,
@@ -338,6 +342,19 @@ export async function scrapeCarrierByMcWithPage(
       extractFirstTextField(combinedBodyText, ["Website", "Website Address", "Web Address"]),
     );
 
+  const truckType = extractFirstTextField(combinedBodyText, [
+    "Truck Type",
+    "Equipment Type",
+    "Vehicle Type",
+  ]);
+  const cargoCarried = extractFirstTextField(combinedBodyText, ["Cargo Carried", "Cargo"]);
+  const operationClassification = mapOperationClassificationType(
+    extractFirstTextField(combinedBodyText, ["Operation Classification", "Classification"]),
+  );
+  const carrierOperation = mapCarrierOperationType(
+    extractFirstTextField(combinedBodyText, ["Carrier Operation", "Operation Type"]),
+  );
+
   const data: ScrapedCarrierData = {
     mcNumber,
     usdotStatus: normalizeStatus(
@@ -352,6 +369,10 @@ export async function scrapeCarrierByMcWithPage(
     powerUnits: extractNumber(extractTextField(combinedBodyText, "Power Units")),
     drivers: extractNumber(extractTextField(combinedBodyText, "Drivers")),
     physicalAddress: extractTextField(combinedBodyText, "Physical Address"),
+    truckType,
+    cargoCarried,
+    operationClassification,
+    carrierOperation,
     website,
     enrichmentStatus: "pending",
     dataSource: "fmcsa_safer",
