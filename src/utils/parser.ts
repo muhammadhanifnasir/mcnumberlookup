@@ -20,6 +20,45 @@ export function extractFirstTextField(text: string, labels: string[]): string | 
   return undefined;
 }
 
+function isLikelyLabeledFieldLine(line: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9/&().,' -]{1,40}\s*:\s*\S/.test(line);
+}
+
+export function extractMultiLineTextField(
+  text: string,
+  label: string,
+  maxLines: number = 2,
+): string | undefined {
+  if (maxLines < 1) return undefined;
+
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^\\s*${escaped}\\s*:?\\s*(.*)$`, "i");
+  const lines = text.split("\n");
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const match = line.match(pattern);
+    if (!match) continue;
+
+    const parts: string[] = [];
+    const firstValue = match[1]?.trim();
+    if (firstValue) parts.push(firstValue);
+
+    let nextIndex = index + 1;
+    while (parts.length < maxLines && nextIndex < lines.length) {
+      const nextLine = lines[nextIndex]?.trim();
+      if (!nextLine) break;
+      if (isLikelyLabeledFieldLine(nextLine)) break;
+      parts.push(nextLine);
+      nextIndex++;
+    }
+
+    return parts.length > 0 ? parts.join(", ") : undefined;
+  }
+
+  return undefined;
+}
+
 /**
  * Normalises a status string by collapsing whitespace.
  */

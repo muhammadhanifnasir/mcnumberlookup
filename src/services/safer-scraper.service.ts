@@ -11,6 +11,7 @@ import {
   extractEmail,
   extractEmailFromMailtoHref,
   extractFirstTextField,
+  extractMultiLineTextField,
   extractNumber,
   extractPhone,
   extractTextField,
@@ -528,7 +529,9 @@ export async function scrapeCarrierByMcWithPage(
     phone: extractPhone(combinedBodyText),
     powerUnits: extractNumber(extractTextField(combinedBodyText, "Power Units")),
     drivers: extractNumber(extractTextField(combinedBodyText, "Drivers")),
-    physicalAddress: extractTextField(combinedBodyText, "Physical Address"),
+    physicalAddress:
+      extractMultiLineTextField(combinedBodyText, "Physical Address", 2) ??
+      extractTextField(combinedBodyText, "Physical Address"),
     truckType,
     cargoCarried,
     operationClassification,
