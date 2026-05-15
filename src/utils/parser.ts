@@ -20,8 +20,12 @@ export function extractFirstTextField(text: string, labels: string[]): string | 
   return undefined;
 }
 
+const LABELED_FIELD_MAX_LABEL_LENGTH = 40;
+
 function isLikelyLabeledFieldLine(line: string): boolean {
-  return /^[A-Za-z][A-Za-z0-9/&().,' -]{1,40}\s*:\s*\S/.test(line);
+  return new RegExp(
+    `^[A-Za-z][A-Za-z0-9/&().,' -]{1,${LABELED_FIELD_MAX_LABEL_LENGTH}}\\s*:\\s*\\S`,
+  ).test(line);
 }
 
 export function extractMultiLineTextField(
@@ -35,8 +39,8 @@ export function extractMultiLineTextField(
   const pattern = new RegExp(`^\\s*${escaped}\\s*:?\\s*(.*)$`, "i");
   const lines = text.split("\n");
 
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index];
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
     const match = line.match(pattern);
     if (!match) continue;
 
@@ -44,7 +48,7 @@ export function extractMultiLineTextField(
     const firstValue = match[1]?.trim();
     if (firstValue) parts.push(firstValue);
 
-    let nextIndex = index + 1;
+    let nextIndex = lineIndex + 1;
     while (parts.length < maxLines && nextIndex < lines.length) {
       const nextLine = lines[nextIndex]?.trim();
       if (!nextLine) break;
