@@ -341,6 +341,7 @@ export async function scrapeCarrierByMcWithPage(
     normalizeWebsiteUrl(
       extractFirstTextField(combinedBodyText, ["Website", "Website Address", "Web Address"]),
     );
+
   const truckType = extractFirstTextField(combinedBodyText, [
     "Truck Type",
     "Equipment Type",
@@ -348,10 +349,10 @@ export async function scrapeCarrierByMcWithPage(
   ]);
   const cargoCarried = extractFirstTextField(combinedBodyText, ["Cargo Carried", "Cargo"]);
   const operationClassification = mapOperationClassificationType(
-    extractFirstTextField(combinedBodyText, ["Operation Classification"]),
+    extractFirstTextField(combinedBodyText, ["Operation Classification", "Classification"]),
   );
   const carrierOperation = mapCarrierOperationType(
-    extractFirstTextField(combinedBodyText, ["Carrier Operation"]),
+    extractFirstTextField(combinedBodyText, ["Carrier Operation", "Operation Type"]),
   );
 
   const data: ScrapedCarrierData = {
