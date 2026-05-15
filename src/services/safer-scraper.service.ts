@@ -25,6 +25,7 @@ const POPUP_WAIT_TIMEOUT_MS = 4_000;
 // Keep supplemental page crawling bounded to control latency during batch imports.
 const MAX_SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
 const MAX_POPUP_CLICK_TARGETS = 10;
+const POPUP_CLICKABLE_SELECTOR = "a,button,input[type='button'],input[type='submit']";
 const SUPPLEMENTAL_ALLOWED_DOMAIN = "fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
@@ -172,6 +173,16 @@ function isPopupTriggerAttribute(value: string | null | undefined): boolean {
   );
 }
 
+function formatPopupTriggerLabel(target: {
+  text: string;
+  value: string | null;
+  id: string | null;
+  name: string | null;
+  tagName: string;
+}) {
+  return target.text || target.value || target.id || target.name || target.tagName;
+}
+
 async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Promise<string[]> {
   const rawCandidates = await page
     .evaluate(() => {
@@ -286,8 +297,8 @@ async function collectPopupSupplementalPageData(
   const sourceHostname = new URL(sourceUrl).hostname;
 
   const clickTargets = await page
-    .evaluate(() =>
-      Array.from(document.querySelectorAll("a,button,input[type='button'],input[type='submit']"))
+    .evaluate(({ selector, maxTargets }) =>
+      Array.from(document.querySelectorAll(selector))
         .map((element, index) => {
           const tagName = element.tagName.toLowerCase();
           const text = (
@@ -308,20 +319,18 @@ async function collectPopupSupplementalPageData(
           const searchableText = [entry.text, entry.href, entry.onClick, entry.value]
             .filter(Boolean)
             .join(" ");
-          return (
-            /carrier registration|sms|overview/i.test(searchableText) ||
-            /window\.open|carrierregistration\.aspx|overview\.aspx|\/sms\/carrier\//i.test(
-              searchableText,
-            )
-          );
+          return /carrier registration|sms|overview|popup/i.test(searchableText);
         })
-        .slice(0, MAX_POPUP_CLICK_TARGETS),
-    )
+        .slice(0, maxTargets),
+    {
+      selector: POPUP_CLICKABLE_SELECTOR,
+      maxTargets: MAX_POPUP_CLICK_TARGETS,
+    })
     .catch(() => []);
 
   if (clickTargets.length === 0) return { texts, mailtoHrefs, websiteHrefs };
 
-  const elements = await page.$$("a,button,input[type='button'],input[type='submit']");
+  const elements = await page.$$(POPUP_CLICKABLE_SELECTOR);
   for (const target of clickTargets) {
     const element = elements[target.index];
     if (!element) continue;
@@ -370,12 +379,12 @@ async function collectPopupSupplementalPageData(
       logger.info("Collected popup SAFER/SMS page", {
         mcNumber,
         popupUrl: popup.url(),
-        triggerText: target.text || target.value || target.id || target.name || target.tagName,
+        triggerText: formatPopupTriggerLabel(target),
       });
     } catch (error) {
       logger.warn("Failed to read popup SAFER/SMS page", {
         mcNumber,
-        triggerText: target.text || target.value || target.id || target.name || target.tagName,
+        triggerText: formatPopupTriggerLabel(target),
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
