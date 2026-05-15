@@ -60,7 +60,10 @@ export function extractMultiLineTextField(
     let nextIndex = lineIndex + 1;
     while (parts.length < maxLines && nextIndex < lines.length) {
       const nextLine = lines[nextIndex]?.trim();
-      if (!nextLine) break;
+      if (!nextLine) {
+        nextIndex++;
+        continue;
+      }
       if (isLikelyLabeledFieldLine(nextLine)) break;
       parts.push(nextLine);
       nextIndex++;
