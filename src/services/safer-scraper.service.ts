@@ -21,8 +21,11 @@ import { normalizeWebsiteUrl } from "@/utils/normalization";
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
 const NETWORK_IDLE_TIMEOUT_MS = 15_000;
+const POPUP_WAIT_TIMEOUT_MS = 4_000;
 // Keep supplemental page crawling bounded to control latency during batch imports.
 const MAX_SUPPLEMENTAL_PAGES_PER_CARRIER = 3;
+const MAX_POPUP_CLICK_TARGETS = 10;
+const POPUP_CLICKABLE_SELECTOR = "a,button,input[type='button'],input[type='submit']";
 const SUPPLEMENTAL_ALLOWED_DOMAIN = "fmcsa.dot.gov";
 const BLOCKED_WEBSITE_HOSTS = new Set(["safer.fmcsa.dot.gov", "fmcsa.dot.gov"]);
 
@@ -138,6 +141,48 @@ async function extractPageBodyText(page: Page): Promise<string> {
     : normalizedTextContent;
 }
 
+async function extractPageLinkHrefs(page: Page): Promise<{ mailtoHrefs: string[]; websiteHrefs: string[] }> {
+  const mailtoHrefs = await page
+    .locator('a[href^="mailto:"]')
+    .evaluateAll((anchors) =>
+      anchors
+        .map((anchor) => anchor.getAttribute("href"))
+        .filter((href): href is string => typeof href === "string"),
+    )
+    .catch(() => []);
+  const websiteHrefs = await page
+    .locator('a[href^="http://"], a[href^="https://"]')
+    .evaluateAll((anchors) =>
+      anchors
+        .map((anchor) => anchor.getAttribute("href"))
+        .filter((href): href is string => typeof href === "string"),
+    )
+    .catch(() => []);
+
+  return { mailtoHrefs, websiteHrefs };
+}
+
+function isPopupTriggerAttribute(value: string | null | undefined): boolean {
+  const candidate = value?.trim();
+  if (!candidate) return false;
+  return (
+    /window\.open/i.test(candidate) ||
+    /CarrierRegistration\.aspx/i.test(candidate) ||
+    /Overview\.aspx/i.test(candidate) ||
+    /\/SMS\/Carrier\//i.test(candidate)
+  );
+}
+
+function formatPopupTriggerLabel(target: {
+  text: string;
+  value: string | null;
+  id: string | null;
+  name: string | null;
+  tagName: string;
+}) {
+  return target.text || target.value || target.id || target.name || target.tagName;
+}
+
 async function discoverSupplementalPageUrls(page: Page, sourceUrl: string): Promise<string[]> {
   const rawCandidates = await page
     .evaluate(() => {
@@ -226,25 +271,9 @@ async function collectSupplementalPageData(
       const bodyText = await extractPageBodyText(page);
       if (bodyText) texts.push(bodyText);
 
-      const supplementalMailtoHrefs = await page
-        .locator('a[href^="mailto:"]')
-        .evaluateAll((anchors) =>
-          anchors
-            .map((anchor) => anchor.getAttribute("href"))
-            .filter((href): href is string => typeof href === "string"),
-        )
-        .catch(() => []);
-      mailtoHrefs.push(...supplementalMailtoHrefs);
-
-      const supplementalWebsiteHrefs = await page
-        .locator('a[href^="http://"], a[href^="https://"]')
-        .evaluateAll((anchors) =>
-          anchors
-            .map((anchor) => anchor.getAttribute("href"))
-            .filter((href): href is string => typeof href === "string"),
-        )
-        .catch(() => []);
-      websiteHrefs.push(...supplementalWebsiteHrefs);
+      const supplementalLinks = await extractPageLinkHrefs(page);
+      mailtoHrefs.push(...supplementalLinks.mailtoHrefs);
+      websiteHrefs.push(...supplementalLinks.websiteHrefs);
     } catch (error) {
       logger.warn("Failed to read supplemental SAFER/SMS page", {
         mcNumber,
@@ -255,6 +284,119 @@ async function collectSupplementalPageData(
   }
 
   return { texts, mailtoHrefs, websiteHrefs };
+}
+
+async function collectPopupSupplementalPageData(
+  page: Page,
+  sourceUrl: string,
+  mcNumber: string,
+): Promise<{ texts: string[]; mailtoHrefs: string[]; websiteHrefs: string[] }> {
+  const texts: string[] = [];
+  const mailtoHrefs: string[] = [];
+  const websiteHrefs: string[] = [];
+  const sourceHostname = new URL(sourceUrl).hostname;
+
+  const clickTargets = await page
+    .evaluate(({ selector, maxTargets }) =>
+      Array.from(document.querySelectorAll(selector))
+        .map((element, index) => {
+          const tagName = element.tagName.toLowerCase();
+          const text = (
+            element instanceof HTMLElement ? element.innerText : element.textContent ?? ""
+          )
+            .replace(/\s+/g, " ")
+            .trim();
+          const href = element.getAttribute("href");
+          const onClick = element.getAttribute("onclick");
+          const target = element.getAttribute("target");
+          const id = element.getAttribute("id");
+          const name = element.getAttribute("name");
+          const value = element.getAttribute("value");
+
+          return { tagName, text, href, onClick, target, id, name, value, index };
+        })
+        .filter((entry) => {
+          const searchableText = [entry.text, entry.href, entry.onClick, entry.value]
+            .filter(Boolean)
+            .join(" ");
+          return /carrier registration|sms|overview|popup/i.test(searchableText);
+        })
+        .slice(0, maxTargets),
+    {
+      selector: POPUP_CLICKABLE_SELECTOR,
+      maxTargets: MAX_POPUP_CLICK_TARGETS,
+    })
+    .catch(() => []);
+
+  if (clickTargets.length === 0) return { texts, mailtoHrefs, websiteHrefs };
+
+  const elements = await page.$$(POPUP_CLICKABLE_SELECTOR);
+  for (const target of clickTargets) {
+    const element = elements[target.index];
+    if (!element) continue;
+
+    const hasPopupSignal =
+      isPopupTriggerAttribute(target.onClick) ||
+      isPopupTriggerAttribute(target.href) ||
+      /^_blank$/i.test(target.target ?? "");
+    if (!hasPopupSignal) continue;
+
+    let popup: Page | null = null;
+    try {
+      const popupPromise = page.waitForEvent("popup", { timeout: POPUP_WAIT_TIMEOUT_MS }).catch(() => null);
+      await element.click({ timeout: POPUP_WAIT_TIMEOUT_MS }).catch(() => undefined);
+      popup = await popupPromise;
+      if (!popup) continue;
+
+      const popupUrl = popup.url();
+      if (popupUrl) {
+        try {
+          const popupParsedUrl = new URL(popupUrl);
+          if (!isAllowedSupplementalHost(popupParsedUrl.hostname, sourceHostname)) {
+            await popup.close().catch(() => undefined);
+            continue;
+          }
+        } catch {
+          await popup.close().catch(() => undefined);
+          continue;
+        }
+      }
+
+      await popup
+        .waitForLoadState("domcontentloaded", { timeout: GOTO_TIMEOUT_MS })
+        .catch(() => undefined);
+      await popup
+        .waitForLoadState("networkidle", { timeout: NETWORK_IDLE_TIMEOUT_MS })
+        .catch(() => undefined);
+
+      const popupBodyText = await extractPageBodyText(popup);
+      if (popupBodyText) texts.push(popupBodyText);
+
+      const popupLinks = await extractPageLinkHrefs(popup);
+      mailtoHrefs.push(...popupLinks.mailtoHrefs);
+      websiteHrefs.push(...popupLinks.websiteHrefs);
+
+      logger.info("Collected popup SAFER/SMS page", {
+        mcNumber,
+        popupUrl: popup.url(),
+        triggerText: formatPopupTriggerLabel(target),
+      });
+    } catch (error) {
+      logger.warn("Failed to read popup SAFER/SMS page", {
+        mcNumber,
+        triggerText: formatPopupTriggerLabel(target),
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      await popup?.close().catch(() => undefined);
+    }
+  }
+
+  return {
+    texts,
+    mailtoHrefs,
+    websiteHrefs,
+  };
 }
 
 export function buildSaferUrl(mcNumber: string) {
@@ -318,33 +460,26 @@ export async function scrapeCarrierByMcWithPage(
     return null;
   }
 
-  const mailtoHrefs = await page
-    .locator('a[href^="mailto:"]')
-    .evaluateAll((anchors) =>
-      anchors
-        .map((anchor) => anchor.getAttribute("href"))
-        .filter((href): href is string => typeof href === "string"),
-    )
-    .catch(() => []);
-  const websiteHrefs = await page
-    .locator('a[href^="http://"], a[href^="https://"]')
-    .evaluateAll((anchors) =>
-      anchors
-        .map((anchor) => anchor.getAttribute("href"))
-        .filter((href): href is string => typeof href === "string"),
-    )
-    .catch(() => []);
+  const currentPageLinks = await extractPageLinkHrefs(page);
+  const mailtoHrefs = currentPageLinks.mailtoHrefs;
+  const websiteHrefs = currentPageLinks.websiteHrefs;
 
   const supplementalUrls = await discoverSupplementalPageUrls(page, sourceUrl);
   const supplementalData = await collectSupplementalPageData(page, supplementalUrls, mcNumber);
-  const combinedBodyText = [bodyText, ...supplementalData.texts].join("\n");
-  const combinedMailtoHrefs = [...new Set([...mailtoHrefs, ...supplementalData.mailtoHrefs])];
-  const combinedWebsiteHrefs = [...new Set([...websiteHrefs, ...supplementalData.websiteHrefs])];
+  const popupSupplementalData = await collectPopupSupplementalPageData(page, sourceUrl, mcNumber);
+  const combinedBodyText = [bodyText, ...supplementalData.texts, ...popupSupplementalData.texts].join("\n");
+  const combinedMailtoHrefs = [
+    ...new Set([...mailtoHrefs, ...supplementalData.mailtoHrefs, ...popupSupplementalData.mailtoHrefs]),
+  ];
+  const combinedWebsiteHrefs = [
+    ...new Set([...websiteHrefs, ...supplementalData.websiteHrefs, ...popupSupplementalData.websiteHrefs]),
+  ];
 
-  if (supplementalUrls.length > 0) {
-    logger.info("Collected supplemental SAFER/SMS pages", {
+  if (supplementalUrls.length > 0 || popupSupplementalData.texts.length > 0) {
+    logger.info("Collected supplemental SAFER/SMS content", {
       mcNumber,
-      supplementalPages: supplementalUrls.length,
+      navigatedPages: supplementalUrls.length,
+      popupPages: popupSupplementalData.texts.length,
     });
   }
 
