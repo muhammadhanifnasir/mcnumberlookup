@@ -21,33 +21,81 @@ type ImportResponse = {
   results: CarrierRecord[];
 };
 
+const IMPORT_BATCH_SIZE = 25;
+
 export function CarrierImportForm() {
   const [mcInput, setMcInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<ImportResponse | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{
+    currentBatch: number;
+    totalBatches: number;
+  } | null>(null);
 
-  const parsedCount = useMemo(() => parseMcNumbers(mcInput).length, [mcInput]);
+  const parsedMcNumbers = useMemo(() => Array.from(new Set(parseMcNumbers(mcInput))), [mcInput]);
+  const parsedCount = parsedMcNumbers.length;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setSummary(null);
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/carrier-import", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ mcInput }),
-      });
+      const mcNumbers = parsedMcNumbers;
 
-      const payload = await readApiResponse<ImportResponse>(response);
-      setSummary(payload);
+      if (mcNumbers.length === 0) {
+        throw new Error("At least one valid MC number is required.");
+      }
+
+      const totalBatches = Math.ceil(mcNumbers.length / IMPORT_BATCH_SIZE);
+      const aggregated: ImportResponse = {
+        processed: 0,
+        imported: 0,
+        failed: 0,
+        notFound: 0,
+        results: [],
+      };
+      const failedBatches: string[] = [];
+
+      for (let i = 0; i < totalBatches; i++) {
+        const batchStart = i * IMPORT_BATCH_SIZE;
+        const batchMcNumbers = mcNumbers.slice(batchStart, batchStart + IMPORT_BATCH_SIZE);
+        setBatchProgress({ currentBatch: i + 1, totalBatches });
+
+        try {
+          const response = await fetch("/api/carrier-import", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ mcNumbers: batchMcNumbers }),
+          });
+
+          const payload = await readApiResponse<ImportResponse>(response);
+          aggregated.processed += payload.processed;
+          aggregated.imported += payload.imported;
+          aggregated.failed += payload.failed;
+          aggregated.notFound += payload.notFound;
+          aggregated.results.push(...payload.results);
+        } catch (batchError) {
+          const message = batchError instanceof Error ? batchError.message : "Import failed.";
+          failedBatches.push(`Batch ${i + 1}/${totalBatches}: ${message}`);
+        }
+      }
+
+      setSummary(aggregated);
+      if (failedBatches.length > 0) {
+        const preview = failedBatches.slice(0, 3).join(" | ");
+        const remaining = failedBatches.length - 3;
+        const suffix = remaining > 0 ? ` | +${remaining} more` : "";
+        setError(`Some batches failed. ${preview}${suffix}`);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Import failed.");
     } finally {
+      setBatchProgress(null);
       setIsSubmitting(false);
     }
   }
@@ -55,13 +103,13 @@ export function CarrierImportForm() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Import MC Numbers</CardTitle>
-          <CardDescription>
-            Paste MC numbers separated by line, comma, or semicolon. You can also enter ranges like
-            1000-1010. Imports run sequentially for safe scraping and enrichment.
-          </CardDescription>
-        </CardHeader>
+          <CardHeader>
+            <CardTitle>Import MC Numbers</CardTitle>
+            <CardDescription>
+              Paste MC numbers separated by line, comma, or semicolon. You can also enter ranges like
+              1000-1010. Imports run sequentially in timeout-safe batches for scraping and enrichment.
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={onSubmit}>
             <textarea
@@ -86,7 +134,15 @@ export function CarrierImportForm() {
       </Card>
 
       {error ? <ErrorState message={error} /> : null}
-      {isSubmitting ? <LoadingState label="Processing MC numbers sequentially..." /> : null}
+      {isSubmitting ? (
+        <LoadingState
+          label={
+            batchProgress
+              ? `Processing batch ${batchProgress.currentBatch}/${batchProgress.totalBatches}...`
+              : "Preparing import batches..."
+          }
+        />
+      ) : null}
 
       {summary ? (
         <Card>
