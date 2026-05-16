@@ -541,7 +541,7 @@ export function CarriersDashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <div>USDOT: {row.usdotNumber ?? "-"}</div>
-                  <div>Authority: {row.authorityStatus ?? "-"}</div>
+                  <div>Authority Status: {row.authorityStatus ?? "-"}</div>
                   <div>Authority Date: {row.authorityDate ?? "-"}</div>
                   <div>Owner: {row.ownerStatus ?? "-"}</div>
                   <div>Phone: {row.phone ?? "-"}</div>
