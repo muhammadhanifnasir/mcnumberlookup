@@ -556,15 +556,16 @@ export async function scrapeCarrierByMcWithPage(
   const carrierOperation = mapCarrierOperationType(
     extractFirstTextField(combinedBodyText, ["Carrier Operation", "Operation Type"]),
   );
-  // SAFER pages can use either "Authority Status" or "Operating Authority Status" for the same value.
+  // SAFER pages typically expose authority status under "Operating Authority Status".
   const authorityStatus =
-    queryFieldMap["authority status"] ??
     queryFieldMap["operating authority status"] ??
-    extractTextField(bodyText, "Authority Status") ??
-    extractTextField(bodyText, "Operating Authority Status");
+    queryFieldMap["authority status"] ??
+    extractFirstTextField(combinedBodyText, ["Operating Authority Status", "Authority Status"]);
+  // SAFER query page uses "MCS-150 Form Date" rather than "Authority Date" on many records.
   const authorityDateRaw =
+    queryFieldMap["mcs-150 form date"] ??
     queryFieldMap["authority date"] ??
-    extractTextField(bodyText, "Authority Date");
+    extractFirstTextField(combinedBodyText, ["MCS-150 Form Date", "Authority Date"]);
   const authorityDate = authorityDateRaw?.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] ?? authorityDateRaw;
 
   const data: ScrapedCarrierData = {
