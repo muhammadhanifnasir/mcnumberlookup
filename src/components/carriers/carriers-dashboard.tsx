@@ -31,6 +31,8 @@ const EXPORT_PAGE_SIZE = 200;
 const EXPORT_HEADERS: Array<{ label: string; value: (record: CarrierRecord) => string | number | null | undefined }> = [
   { label: "MC Number", value: (record) => record.mcNumber },
   { label: "USDOT Number", value: (record) => record.usdotNumber },
+  { label: "Authority Status", value: (record) => record.authorityStatus },
+  { label: "Authority Date", value: (record) => record.authorityDate },
   { label: "Legal Name", value: (record) => record.legalName },
   { label: "DBA Name", value: (record) => record.dbaName },
   { label: "Owner Status", value: (record) => record.ownerStatus },
@@ -342,6 +344,16 @@ export function CarriersDashboard() {
         cell: ({ row }) => row.original.usdotNumber ?? "-",
       },
       {
+        accessorKey: "authorityStatus",
+        header: "Authority Status",
+        cell: ({ row }) => row.original.authorityStatus ?? "-",
+      },
+      {
+        accessorKey: "authorityDate",
+        header: "Authority Date",
+        cell: ({ row }) => row.original.authorityDate ?? "-",
+      },
+      {
         accessorKey: "legalName",
         header: "Legal Name",
         cell: ({ row }) => row.original.legalName ?? row.original.dbaName ?? "-",
@@ -529,6 +541,8 @@ export function CarriersDashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <div>USDOT: {row.usdotNumber ?? "-"}</div>
+                  <div>Authority: {row.authorityStatus ?? "-"}</div>
+                  <div>Authority Date: {row.authorityDate ?? "-"}</div>
                   <div>Owner: {row.ownerStatus ?? "-"}</div>
                   <div>Phone: {row.phone ?? "-"}</div>
                   <div>Fleet: {row.fleetSizeCategory ?? "-"}</div>

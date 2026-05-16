@@ -5,6 +5,8 @@ import { TableShell } from "@/components/common/table-shell";
 const columns = [
   { key: "mc", label: "MC" },
   { key: "usdot", label: "USDOT Number" },
+  { key: "authorityStatus", label: "Authority Status" },
+  { key: "authorityDate", label: "Authority Date" },
   { key: "name", label: "Carrier" },
   { key: "ownerStatus", label: "Owner Status" },
   { key: "physicalAddress", label: "Physical Address" },
@@ -20,6 +22,8 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
         <tr key={`${carrier.mcNumber}-${carrier.scrapedAt}`}>
           <td className="whitespace-nowrap px-4 py-3 font-medium text-card-foreground">MC {carrier.mcNumber}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.usdotNumber ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.authorityStatus ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.authorityDate ?? "-"}</td>
           <td className="px-4 py-3 text-card-foreground">{carrier.legalName ?? carrier.dbaName ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.ownerStatus ?? "-"}</td>
           <td className="px-4 py-3 text-muted-foreground">{carrier.physicalAddress ?? "-"}</td>

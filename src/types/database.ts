@@ -12,6 +12,8 @@ export type Database = {
           legal_name: string | null;
           mc_number: string;
           mcs150_form_date: string | null;
+          authority_status: string | null;
+          authority_date: string | null;
           operating_authority_status: string | null;
           owner_status: string | null;
           physical_address: string | null;
@@ -36,6 +38,8 @@ export type Database = {
           legal_name?: string | null;
           mc_number: string;
           mcs150_form_date?: string | null;
+          authority_status?: string | null;
+          authority_date?: string | null;
           operating_authority_status?: string | null;
           owner_status?: string | null;
           physical_address?: string | null;
@@ -60,6 +64,8 @@ export type Database = {
           legal_name?: string | null;
           mc_number?: string;
           mcs150_form_date?: string | null;
+          authority_status?: string | null;
+          authority_date?: string | null;
           operating_authority_status?: string | null;
           owner_status?: string | null;
           physical_address?: string | null;

@@ -84,6 +84,46 @@ function extractUsdotNumber(text: string): string | undefined {
   return text.match(/USDOT\s*Number\s*:?\s*(\d+)/i)?.[1];
 }
 
+function normalizeQueryFieldLabel(label: string): string {
+  return label.replace(/\s+/g, " ").replace(/:\s*$/, "").trim().toLowerCase();
+}
+
+async function extractQueryFieldMap(page: Page): Promise<Record<string, string>> {
+  const rawEntries = await page
+    .evaluate(() => {
+      const entries: Array<{ label: string; value: string }> = [];
+      const fields = Array.from(document.querySelectorAll(".queryfield"));
+
+      for (const field of fields) {
+        const value = (field.textContent ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+        if (!value) continue;
+
+        const siblingLabel = field.previousElementSibling?.textContent ?? "";
+        const rowLabelCandidates = Array.from(field.closest("tr")?.querySelectorAll("td,th") ?? [])
+          .filter((cell) => cell !== field)
+          .map((cell) => cell.textContent ?? "");
+        const label = [siblingLabel, ...rowLabelCandidates]
+          .map((candidate) => candidate.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim())
+          .find((candidate) => Boolean(candidate)) ?? "";
+
+        if (!label) continue;
+        entries.push({ label, value });
+      }
+
+      return entries;
+    })
+    .catch(() => []);
+
+  const map: Record<string, string> = {};
+  for (const entry of rawEntries) {
+    const normalizedLabel = normalizeQueryFieldLabel(entry.label);
+    if (!normalizedLabel || map[normalizedLabel]) continue;
+    map[normalizedLabel] = entry.value;
+  }
+
+  return map;
+}
+
 function isHostWithinDomain(hostname: string, domain: string): boolean {
   const normalizedHost = hostname.toLowerCase();
   const normalizedDomain = domain.toLowerCase();
@@ -462,6 +502,7 @@ export async function scrapeCarrierByMcWithPage(
     });
 
   const bodyText = await extractPageBodyText(page);
+  const queryFieldMap = await extractQueryFieldMap(page);
 
   // Exit early when carrier is missing so we avoid unnecessary supplemental-page navigation.
   if (/no records matching your query were found/i.test(bodyText)) {
@@ -515,6 +556,15 @@ export async function scrapeCarrierByMcWithPage(
   const carrierOperation = mapCarrierOperationType(
     extractFirstTextField(combinedBodyText, ["Carrier Operation", "Operation Type"]),
   );
+  const authorityStatus =
+    queryFieldMap["authority status"] ??
+    queryFieldMap["operating authority status"] ??
+    extractTextField(bodyText, "Authority Status") ??
+    extractTextField(bodyText, "Operating Authority Status");
+  const authorityDateRaw =
+    queryFieldMap["authority date"] ??
+    extractTextField(bodyText, "Authority Date");
+  const authorityDate = authorityDateRaw?.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] ?? authorityDateRaw;
 
   const data: ScrapedCarrierData = {
     mcNumber,
@@ -523,6 +573,9 @@ export async function scrapeCarrierByMcWithPage(
     ),
     ownerStatus: normalizeStatus(extractFirstTextField(bodyText, ["Owner Status", "Entity Type"])),
     usdotNumber: extractUsdotNumber(bodyText),
+    authorityStatus: normalizeStatus(authorityStatus),
+    authorityDate: authorityDate?.trim(),
+    operatingAuthorityStatus: normalizeStatus(authorityStatus),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
     emailAddress,
