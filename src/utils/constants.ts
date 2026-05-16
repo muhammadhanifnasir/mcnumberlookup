@@ -1,1 +1,1 @@
-export const APP_NAME = "MCN Extractor";
+export const APP_NAME = "MC EXTRACTION";
