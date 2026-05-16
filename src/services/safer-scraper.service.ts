@@ -566,7 +566,12 @@ export async function scrapeCarrierByMcWithPage(
     queryFieldMap["mcs-150 form date"] ??
     queryFieldMap["authority date"] ??
     extractFirstTextField(combinedBodyText, ["MCS-150 Form Date", "Authority Date"]);
-  const authorityDate = authorityDateRaw?.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] ?? authorityDateRaw;
+  const normalizedAuthorityDateRaw = authorityDateRaw
+    ?.replace(/\u00a0/g, " ")
+    .replace(/&nbsp;|&#160;|&#xA0;/gi, " ")
+    .trim();
+  const authorityDate =
+    normalizedAuthorityDateRaw?.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] ?? normalizedAuthorityDateRaw;
 
   const data: ScrapedCarrierData = {
     mcNumber,
