@@ -29,12 +29,18 @@ type CarrierListResponse = {
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
 const EXPORT_PAGE_SIZE = 200;
 const USDOT_STATUS_FILTER_ALL = "";
+const USDOT_STATUS_VALUES = {
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+  OUT_OF_SERVICE: "OUT OF SERVICE",
+  NOT_AUTHORIZED: "NOT AUTHORIZED",
+} as const;
 const USDOT_STATUS_FILTER_OPTIONS = [
   { value: USDOT_STATUS_FILTER_ALL, label: "All extracted results" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "INACTIVE", label: "Inactive" },
-  { value: "OUT OF SERVICE", label: "Out of Service" },
-  { value: "NOT AUTHORIZED", label: "Not Authorized" },
+  { value: USDOT_STATUS_VALUES.ACTIVE, label: "Active" },
+  { value: USDOT_STATUS_VALUES.INACTIVE, label: "Inactive" },
+  { value: USDOT_STATUS_VALUES.OUT_OF_SERVICE, label: "Out of Service" },
+  { value: USDOT_STATUS_VALUES.NOT_AUTHORIZED, label: "Not Authorized" },
 ] as const;
 
 const EXPORT_HEADERS: Array<{ label: string; value: (record: CarrierRecord) => string | number | null | undefined }> = [
