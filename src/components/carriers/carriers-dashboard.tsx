@@ -12,6 +12,7 @@ import { SearchBar } from "@/components/common/search-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
 
@@ -27,6 +28,14 @@ type CarrierListResponse = {
 
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
 const EXPORT_PAGE_SIZE = 200;
+const USDOT_STATUS_FILTER_ALL = "__all__";
+const USDOT_STATUS_FILTER_OPTIONS = [
+  { value: USDOT_STATUS_FILTER_ALL, label: "All extracted results" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "INACTIVE", label: "Inactive" },
+  { value: "OUT OF SERVICE", label: "Out of Service" },
+  { value: "NOT AUTHORIZED", label: "Not Authorized" },
+] as const;
 
 const EXPORT_HEADERS: Array<{ label: string; value: (record: CarrierRecord) => string | number | null | undefined }> = [
   { label: "MC Number", value: (record) => record.mcNumber },
@@ -77,6 +86,7 @@ export function CarriersDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [usdotStatusFilter, setUsdotStatusFilter] = useState<string>(USDOT_STATUS_FILTER_ALL);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
@@ -108,6 +118,9 @@ export function CarriersDashboard() {
       if (search.trim()) {
         params.set("search", search.trim());
       }
+      if (usdotStatusFilter !== USDOT_STATUS_FILTER_ALL) {
+        params.set("usdotStatus", usdotStatusFilter);
+      }
       const response = await fetch(`/api/carriers?${params.toString()}`, {
         method: "GET",
         cache: "no-store",
@@ -125,7 +138,7 @@ export function CarriersDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, search]);
+  }, [page, pageSize, search, usdotStatusFilter]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -280,6 +293,9 @@ export function CarriersDashboard() {
         if (search.trim()) {
           params.set("search", search.trim());
         }
+        if (usdotStatusFilter !== USDOT_STATUS_FILTER_ALL) {
+          params.set("usdotStatus", usdotStatusFilter);
+        }
 
         const response = await fetch(`/api/carriers?${params.toString()}`, {
           method: "GET",
@@ -311,7 +327,7 @@ export function CarriersDashboard() {
     } finally {
       setDownloading(false);
     }
-  }, [search]);
+  }, [search, usdotStatusFilter]);
 
   const columns = useMemo<ColumnDef<CarrierRecord>[]>(
     () => [
@@ -456,8 +472,27 @@ export function CarriersDashboard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="w-full lg:max-w-md">
+          <div className="grid w-full gap-3 lg:max-w-3xl lg:grid-cols-[minmax(0,1fr)_240px]">
             <SearchBar value={searchInput} onChange={setSearchInput} disabled={loading} />
+            <Select
+              value={usdotStatusFilter}
+              onValueChange={(nextStatus) => {
+                setUsdotStatusFilter(nextStatus);
+                setPage(1);
+              }}
+              disabled={loading}
+            >
+              <SelectTrigger aria-label="Filter extracted results">
+                <SelectValue placeholder="Filter extracted results" />
+              </SelectTrigger>
+              <SelectContent>
+                {USDOT_STATUS_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {selectedCount > 0 ? (
