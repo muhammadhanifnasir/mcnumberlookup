@@ -12,6 +12,9 @@ export default function Head() {
         `gtag('config', ${JSON.stringify(googleAnalyticsId)});`,
       ].join("\n")
     : null;
+  const googleAnalyticsScriptSrc = googleAnalyticsId
+    ? `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(googleAnalyticsId)}`
+    : null;
 
   return (
     <>
@@ -29,13 +32,9 @@ export default function Head() {
           />
         </>
       ) : null}
-      {googleAnalyticsId && analyticsBootstrapScript ? (
+      {analyticsBootstrapScript && googleAnalyticsScriptSrc ? (
         <>
-          <script
-            async
-            src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(googleAnalyticsId)}`}
-            {...nonceProps}
-          />
+          <script async src={googleAnalyticsScriptSrc} {...nonceProps} />
           <script
             {...nonceProps}
             dangerouslySetInnerHTML={{
