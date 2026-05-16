@@ -556,6 +556,7 @@ export async function scrapeCarrierByMcWithPage(
   const carrierOperation = mapCarrierOperationType(
     extractFirstTextField(combinedBodyText, ["Carrier Operation", "Operation Type"]),
   );
+  // SAFER pages can use either "Authority Status" or "Operating Authority Status" for the same value.
   const authorityStatus =
     queryFieldMap["authority status"] ??
     queryFieldMap["operating authority status"] ??
@@ -575,6 +576,7 @@ export async function scrapeCarrierByMcWithPage(
     usdotNumber: extractUsdotNumber(bodyText),
     authorityStatus: normalizeStatus(authorityStatus),
     authorityDate: authorityDate?.trim(),
+    // Keep legacy field populated for backwards compatibility with existing consumers.
     operatingAuthorityStatus: normalizeStatus(authorityStatus),
     legalName: extractTextField(bodyText, "Legal Name"),
     dbaName: extractTextField(bodyText, "DBA Name"),
