@@ -28,7 +28,7 @@ type CarrierListResponse = {
 
 const CONFIRM_DELETE_TIMEOUT_MS = 5_000;
 const EXPORT_PAGE_SIZE = 200;
-const USDOT_STATUS_FILTER_ALL = "__all__";
+const USDOT_STATUS_FILTER_ALL = "";
 const USDOT_STATUS_FILTER_OPTIONS = [
   { value: USDOT_STATUS_FILTER_ALL, label: "All extracted results" },
   { value: "ACTIVE", label: "Active" },
