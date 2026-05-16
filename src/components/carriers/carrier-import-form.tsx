@@ -33,7 +33,8 @@ export function CarrierImportForm() {
     totalBatches: number;
   } | null>(null);
 
-  const parsedCount = useMemo(() => parseMcNumbers(mcInput).length, [mcInput]);
+  const parsedMcNumbers = useMemo(() => Array.from(new Set(parseMcNumbers(mcInput))), [mcInput]);
+  const parsedCount = parsedMcNumbers.length;
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,7 +43,7 @@ export function CarrierImportForm() {
     setIsSubmitting(true);
 
     try {
-      const mcNumbers = Array.from(new Set(parseMcNumbers(mcInput)));
+      const mcNumbers = parsedMcNumbers;
 
       if (mcNumbers.length === 0) {
         throw new Error("At least one valid MC number is required.");
@@ -56,6 +57,7 @@ export function CarrierImportForm() {
         notFound: 0,
         results: [],
       };
+      const failedBatches: string[] = [];
 
       for (let i = 0; i < totalBatches; i++) {
         const batchStart = i * IMPORT_BATCH_SIZE;
@@ -79,11 +81,17 @@ export function CarrierImportForm() {
           aggregated.results.push(...payload.results);
         } catch (batchError) {
           const message = batchError instanceof Error ? batchError.message : "Import failed.";
-          throw new Error(`Batch ${i + 1}/${totalBatches} failed: ${message}`);
+          failedBatches.push(`Batch ${i + 1}/${totalBatches}: ${message}`);
         }
       }
 
       setSummary(aggregated);
+      if (failedBatches.length > 0) {
+        const preview = failedBatches.slice(0, 3).join(" | ");
+        const remaining = failedBatches.length - 3;
+        const suffix = remaining > 0 ? ` | +${remaining} more` : "";
+        setError(`Some batches failed. ${preview}${suffix}`);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Import failed.");
     } finally {
