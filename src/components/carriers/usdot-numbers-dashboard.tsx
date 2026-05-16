@@ -24,6 +24,8 @@ type CarrierListResponse = {
 const columns = [
   { key: "mc", label: "MC Number" },
   { key: "usdot", label: "USDOT Number" },
+  { key: "authorityStatus", label: "Authority Status" },
+  { key: "authorityDate", label: "Authority Date" },
   { key: "name", label: "Carrier" },
   { key: "scrapedAt", label: "Scraped At" },
 ];
@@ -113,6 +115,12 @@ export function UsdotNumbersDashboard() {
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                     {record.usdotNumber ?? "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                    {record.authorityStatus ?? "-"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                    {record.authorityDate ?? "-"}
                   </td>
                   <td className="px-4 py-3 text-card-foreground">{record.legalName ?? record.dbaName ?? "-"}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">

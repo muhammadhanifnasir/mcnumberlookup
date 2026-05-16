@@ -10,6 +10,8 @@ export type Database = {
           usdot_status: string | null;
           owner_status: string | null;
           usdot_number: string | null;
+          authority_status: string | null;
+          authority_date: string | null;
           mcs150_form_date: string | null;
           operating_authority_status: string | null;
           legal_name: string | null;
@@ -34,6 +36,8 @@ export type Database = {
           usdot_status?: string | null;
           owner_status?: string | null;
           usdot_number?: string | null;
+          authority_status?: string | null;
+          authority_date?: string | null;
           mcs150_form_date?: string | null;
           operating_authority_status?: string | null;
           legal_name?: string | null;
@@ -58,6 +62,8 @@ export type Database = {
           usdot_status?: string | null;
           owner_status?: string | null;
           usdot_number?: string | null;
+          authority_status?: string | null;
+          authority_date?: string | null;
           mcs150_form_date?: string | null;
           operating_authority_status?: string | null;
           legal_name?: string | null;

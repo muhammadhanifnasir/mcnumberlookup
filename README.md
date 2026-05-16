@@ -55,6 +55,8 @@ It creates `public.carriers` with:
 - `mc_number` (text, unique)
 - `usdot_status` (text)
 - `usdot_number` (text)
+- `authority_status` (text)
+- `authority_date` (text)
 - `mcs150_form_date` (text)
 - `operating_authority_status` (text)
 - `legal_name` (text)

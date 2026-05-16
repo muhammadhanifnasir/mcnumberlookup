@@ -125,6 +125,8 @@ export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertP
     usdot_status: record.usdotStatus ?? null,
     owner_status: record.ownerStatus ?? null,
     usdot_number: record.usdotNumber ?? null,
+    authority_status: record.authorityStatus ?? null,
+    authority_date: record.authorityDate ?? null,
     mcs150_form_date: record.mcs150FormDate ?? null,
     operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
@@ -150,6 +152,8 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   if (record.usdotStatus !== undefined) payload.usdot_status = record.usdotStatus ?? null;
   if (record.ownerStatus !== undefined) payload.owner_status = record.ownerStatus ?? null;
   if (record.usdotNumber !== undefined) payload.usdot_number = record.usdotNumber ?? null;
+  if (record.authorityStatus !== undefined) payload.authority_status = record.authorityStatus ?? null;
+  if (record.authorityDate !== undefined) payload.authority_date = record.authorityDate ?? null;
   if (record.mcs150FormDate !== undefined) payload.mcs150_form_date = record.mcs150FormDate ?? null;
   if (record.operatingAuthorityStatus !== undefined) {
     payload.operating_authority_status = record.operatingAuthorityStatus ?? null;
@@ -182,6 +186,8 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     usdotStatus: row.usdot_status ?? undefined,
     ownerStatus: row.owner_status ?? undefined,
     usdotNumber: row.usdot_number ?? undefined,
+    authorityStatus: row.authority_status ?? undefined,
+    authorityDate: row.authority_date ?? undefined,
     mcs150FormDate: row.mcs150_form_date ?? undefined,
     operatingAuthorityStatus: row.operating_authority_status ?? undefined,
     legalName: row.legal_name ?? undefined,

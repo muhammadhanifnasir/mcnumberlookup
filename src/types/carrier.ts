@@ -26,6 +26,8 @@ export type ScrapedCarrierData = {
   usdotStatus?: string;
   ownerStatus?: string;
   usdotNumber?: string;
+  authorityStatus?: string;
+  authorityDate?: string;
   mcs150FormDate?: string;
   operatingAuthorityStatus?: string;
   legalName?: string;
