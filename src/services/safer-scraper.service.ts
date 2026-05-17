@@ -8,6 +8,8 @@ import {
 } from "@/utils/carrier-type-mappers";
 import { logger } from "@/utils/logger";
 import {
+  extractEmail,
+  extractEmailFromMailtoHref,
   extractFirstTextField,
   extractMultiLineTextField,
   extractNumber,
@@ -16,7 +18,7 @@ import {
   normalizeAuthorityStatusLabel,
   normalizeStatus,
 } from "@/utils/parser";
-import { normalizeWebsiteUrl } from "@/utils/normalization";
+import { normalizeEmail, normalizeWebsiteUrl } from "@/utils/normalization";
 
 const SAFER_BASE_URL = "https://safer.fmcsa.dot.gov/query.asp";
 const GOTO_TIMEOUT_MS = 60_000;
@@ -554,6 +556,13 @@ export async function scrapeCarrierByMcWithPage(
   const combinedWebsiteHrefs = [
     ...new Set([...websiteHrefs, ...supplementalData.websiteHrefs, ...popupSupplementalData.websiteHrefs]),
   ];
+  const combinedMailtoHrefs = [
+    ...new Set([
+      ...currentPageLinks.mailtoHrefs,
+      ...supplementalData.mailtoHrefs,
+      ...popupSupplementalData.mailtoHrefs,
+    ]),
+  ];
 
   if (supplementalUrlsWithRegistration.length > 0 || popupSupplementalData.texts.length > 0) {
     logger.info("Collected supplemental SAFER/SMS content", {
@@ -609,6 +618,12 @@ export async function scrapeCarrierByMcWithPage(
     extractTextField(combinedBodyText, "Address") ??
     extractMultiLineTextField(bodyText, "Physical Address", 2) ??
     extractTextField(bodyText, "Physical Address");
+  const emailAddress =
+    combinedMailtoHrefs
+      .map((href) => extractEmailFromMailtoHref(href))
+      .map((email) => normalizeEmail(email))
+      .find((email): email is string => Boolean(email)) ??
+    normalizeEmail(extractEmail(combinedBodyText));
 
   const data: ScrapedCarrierData = {
     mcNumber,
@@ -624,6 +639,7 @@ export async function scrapeCarrierByMcWithPage(
     legalName,
     dbaName: extractTextField(bodyText, "DBA Name"),
     phone: extractPhone(combinedBodyText),
+    emailAddress,
     powerUnits: extractNumber(extractTextField(combinedBodyText, "Power Units")),
     drivers: extractNumber(extractTextField(combinedBodyText, "Drivers")),
     physicalAddress,

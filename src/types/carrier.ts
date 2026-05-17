@@ -34,6 +34,7 @@ export type ScrapedCarrierData = {
   dbaName?: string;
   entityType?: string;
   phone?: string;
+  emailAddress?: string;
   powerUnits?: string;
   drivers?: string;
   physicalAddress?: string;
