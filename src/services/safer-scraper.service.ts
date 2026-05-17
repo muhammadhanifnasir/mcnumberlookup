@@ -84,6 +84,10 @@ function extractUsdotNumber(text: string): string | undefined {
   return text.match(/USDOT\s*Number\s*:?\s*(\d+)/i)?.[1];
 }
 
+function buildCarrierRegistrationUrl(usdotNumber: string): string {
+  return `https://ai.fmcsa.dot.gov/SMS/Carrier/${usdotNumber}/CarrierRegistration.aspx`;
+}
+
 function normalizeQueryFieldLabel(label: string): string {
   return label.replace(/\s+/g, " ").replace(/:\s*$/, "").trim().toLowerCase();
 }
@@ -503,6 +507,7 @@ export async function scrapeCarrierByMcWithPage(
 
   const bodyText = await extractPageBodyText(page);
   const queryFieldMap = await extractQueryFieldMap(page);
+  const usdotNumber = extractUsdotNumber(bodyText);
 
   // Exit early when carrier is missing so we avoid unnecessary supplemental-page navigation.
   if (/no records matching your query were found/i.test(bodyText)) {
@@ -515,7 +520,17 @@ export async function scrapeCarrierByMcWithPage(
   const websiteHrefs = currentPageLinks.websiteHrefs;
 
   const supplementalUrls = await discoverSupplementalPageUrls(page, sourceUrl);
-  const supplementalData = await collectSupplementalPageData(page, supplementalUrls, mcNumber);
+  const registrationUrl = usdotNumber ? buildCarrierRegistrationUrl(usdotNumber) : undefined;
+  const supplementalUrlsWithRegistration = (
+    registrationUrl
+    ? [...new Set([registrationUrl, ...supplementalUrls])]
+    : supplementalUrls
+  ).slice(0, MAX_SUPPLEMENTAL_PAGES_PER_CARRIER);
+  const supplementalData = await collectSupplementalPageData(
+    page,
+    supplementalUrlsWithRegistration,
+    mcNumber,
+  );
   const popupSupplementalData = await collectPopupSupplementalPageData(page, sourceUrl, mcNumber);
   const combinedBodyText = [bodyText, ...supplementalData.texts, ...popupSupplementalData.texts].join("\n");
   const combinedMailtoHrefs = [
@@ -525,10 +540,10 @@ export async function scrapeCarrierByMcWithPage(
     ...new Set([...websiteHrefs, ...supplementalData.websiteHrefs, ...popupSupplementalData.websiteHrefs]),
   ];
 
-  if (supplementalUrls.length > 0 || popupSupplementalData.texts.length > 0) {
+  if (supplementalUrlsWithRegistration.length > 0 || popupSupplementalData.texts.length > 0) {
     logger.info("Collected supplemental SAFER/SMS content", {
       mcNumber,
-      navigatedPages: supplementalUrls.length,
+      navigatedPages: supplementalUrlsWithRegistration.length,
       popupPages: popupSupplementalData.texts.length,
     });
   }
@@ -573,26 +588,33 @@ export async function scrapeCarrierByMcWithPage(
   const authorityDate =
     normalizedAuthorityDateRaw?.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/)?.[0] ?? normalizedAuthorityDateRaw;
 
+  const legalName =
+    extractTextField(combinedBodyText, "Legal Name") ??
+    extractTextField(bodyText, "Legal Name");
+  const physicalAddress =
+    extractMultiLineTextField(combinedBodyText, "Physical Address", 2) ??
+    extractTextField(combinedBodyText, "Physical Address") ??
+    extractMultiLineTextField(combinedBodyText, "Address", 2) ??
+    extractTextField(combinedBodyText, "Address");
+
   const data: ScrapedCarrierData = {
     mcNumber,
     usdotStatus: normalizeStatus(
       extractTextField(bodyText, "USDOT Status") ?? extractTextField(bodyText, "Operating Status"),
     ),
     ownerStatus: normalizeStatus(extractFirstTextField(bodyText, ["Owner Status", "Entity Type"])),
-    usdotNumber: extractUsdotNumber(bodyText),
+    usdotNumber,
     authorityStatus: normalizeStatus(authorityStatus),
     authorityDate: authorityDate?.trim(),
     // Keep legacy field populated for backwards compatibility with existing consumers.
     operatingAuthorityStatus: normalizeStatus(authorityStatus),
-    legalName: extractTextField(bodyText, "Legal Name"),
+    legalName,
     dbaName: extractTextField(bodyText, "DBA Name"),
     emailAddress,
     phone: extractPhone(combinedBodyText),
     powerUnits: extractNumber(extractTextField(combinedBodyText, "Power Units")),
     drivers: extractNumber(extractTextField(combinedBodyText, "Drivers")),
-    physicalAddress:
-      extractMultiLineTextField(combinedBodyText, "Physical Address", 2) ??
-      extractTextField(combinedBodyText, "Physical Address"),
+    physicalAddress,
     truckType,
     cargoCarried,
     operationClassification,
