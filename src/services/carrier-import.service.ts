@@ -77,11 +77,11 @@ async function processOneMcNumber(mcNumber: string, page: Page): Promise<Carrier
     record = buildFailedRecord(mcNumber, error);
   }
 
-  return withRetry(
-    () => upsertCarrierForImport(record),
-    UPSERT_RETRY_OPTIONS,
-    `upsert MC#${mcNumber}`,
-  );
+  if (record.importStatus !== "imported") {
+    return record;
+  }
+
+  return withRetry(() => upsertCarrierForImport(record), UPSERT_RETRY_OPTIONS, `upsert MC#${mcNumber}`);
 }
 
 export async function importCarriersSequentially(mcNumbers: string[]) {
