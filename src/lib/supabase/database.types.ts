@@ -16,7 +16,6 @@ export type Database = {
           operating_authority_status: string | null;
           legal_name: string | null;
           dba_name: string | null;
-          email_address: string | null;
           phone: string | null;
           power_units: number | null;
           drivers: number | null;
@@ -43,7 +42,6 @@ export type Database = {
           operating_authority_status?: string | null;
           legal_name?: string | null;
           dba_name?: string | null;
-          email_address?: string | null;
           phone?: string | null;
           power_units?: number | null;
           drivers?: number | null;
@@ -70,7 +68,6 @@ export type Database = {
           operating_authority_status?: string | null;
           legal_name?: string | null;
           dba_name?: string | null;
-          email_address?: string | null;
           phone?: string | null;
           power_units?: number | null;
           drivers?: number | null;

@@ -8,8 +8,6 @@ import {
 } from "@/utils/carrier-type-mappers";
 import { logger } from "@/utils/logger";
 import {
-  extractEmail,
-  extractEmailFromMailtoHref,
   extractFirstTextField,
   extractMultiLineTextField,
   extractNumber,
@@ -539,7 +537,6 @@ export async function scrapeCarrierByMcWithPage(
   }
 
   const currentPageLinks = await extractPageLinkHrefs(page);
-  const mailtoHrefs = currentPageLinks.mailtoHrefs;
   const websiteHrefs = currentPageLinks.websiteHrefs;
 
   const supplementalUrls = await discoverSupplementalPageUrls(page, sourceUrl);
@@ -554,9 +551,6 @@ export async function scrapeCarrierByMcWithPage(
   );
   const popupSupplementalData = await collectPopupSupplementalPageData(page, sourceUrl, mcNumber);
   const combinedBodyText = [bodyText, ...supplementalData.texts, ...popupSupplementalData.texts].join("\n");
-  const combinedMailtoHrefs = [
-    ...new Set([...mailtoHrefs, ...supplementalData.mailtoHrefs, ...popupSupplementalData.mailtoHrefs]),
-  ];
   const combinedWebsiteHrefs = [
     ...new Set([...websiteHrefs, ...supplementalData.websiteHrefs, ...popupSupplementalData.websiteHrefs]),
   ];
@@ -569,14 +563,6 @@ export async function scrapeCarrierByMcWithPage(
     });
   }
 
-  const emailAddress =
-    extractEmail(
-      queryFieldMap["email address"] ?? queryFieldMap["email"] ?? queryFieldMap["e-mail"],
-    ) ??
-    extractEmail(combinedBodyText) ??
-    combinedMailtoHrefs
-      .map((href) => extractEmailFromMailtoHref(href))
-      .find((value): value is string => Boolean(value));
   const website =
     pickCarrierWebsiteFromHrefs(combinedWebsiteHrefs) ??
     normalizeWebsiteUrl(
@@ -637,7 +623,6 @@ export async function scrapeCarrierByMcWithPage(
     operatingAuthorityStatus: authorityStatusLabel,
     legalName,
     dbaName: extractTextField(bodyText, "DBA Name"),
-    emailAddress,
     phone: extractPhone(combinedBodyText),
     powerUnits: extractNumber(extractTextField(combinedBodyText, "Power Units")),
     drivers: extractNumber(extractTextField(combinedBodyText, "Drivers")),

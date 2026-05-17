@@ -1,17 +1,15 @@
 import type { CarrierRecord, EnrichmentStatus } from "@/types/carrier";
 
 import { classifyCarrier } from "@/services/carrier-classification.service";
-import { extractBusinessEmailFromWebsite } from "@/services/email-extraction.service";
 import { discoverCarrierWebsite } from "@/services/website-discovery.service";
 import {
   mapCarrierOperationType,
   mapOperationClassificationType,
 } from "@/utils/carrier-type-mappers";
-import { normalizeEmail, normalizeWebsiteUrl, normalizeWhitespace } from "@/utils/normalization";
+import { normalizeWebsiteUrl, normalizeWhitespace } from "@/utils/normalization";
 
 function resolveEnrichmentStatus(input: {
   website?: string;
-  emailAddress?: string;
   cargoCarried?: string;
   operationClassification?: string;
   carrierOperation?: string;
@@ -19,7 +17,6 @@ function resolveEnrichmentStatus(input: {
 }): EnrichmentStatus {
   const completeSignals = [
     input.website,
-    input.emailAddress,
     input.cargoCarried,
     input.operationClassification,
     input.carrierOperation,
@@ -31,8 +28,8 @@ function resolveEnrichmentStatus(input: {
   return "failed";
 }
 
-function resolveDataSource(input: { website?: string; emailAddress?: string }) {
-  if (input.website || input.emailAddress) return "fmcsa_safer+website";
+function resolveDataSource(input: { website?: string }) {
+  if (input.website) return "fmcsa_safer+website";
   return "fmcsa_safer";
 }
 
@@ -46,8 +43,6 @@ export async function enrichCarrierRecord(record: CarrierRecord): Promise<Carrie
     }));
 
   const website = normalizeWebsiteUrl(discoveredWebsite);
-  const scrapedWebsiteEmail = website ? await extractBusinessEmailFromWebsite(website) : undefined;
-  const emailAddress = normalizeEmail(record.emailAddress) ?? normalizeEmail(scrapedWebsiteEmail);
 
   const cargoCarried = normalizeWhitespace(record.cargoCarried ?? record.truckType);
   const operationClassification = mapOperationClassificationType(
@@ -69,7 +64,6 @@ export async function enrichCarrierRecord(record: CarrierRecord): Promise<Carrie
 
   const enrichmentStatus = resolveEnrichmentStatus({
     website,
-    emailAddress,
     cargoCarried,
     operationClassification,
     carrierOperation,
@@ -79,14 +73,13 @@ export async function enrichCarrierRecord(record: CarrierRecord): Promise<Carrie
   return {
     ...record,
     website,
-    emailAddress,
     cargoCarried,
     operationClassification,
     carrierOperation,
     fleetSizeCategory: classification.fleetSizeCategory,
     inferredTruckType: classification.inferredTruckType,
     equipmentType: classification.equipmentType,
-    dataSource: resolveDataSource({ website, emailAddress }),
+    dataSource: resolveDataSource({ website }),
     enrichmentStatus,
   };
 }

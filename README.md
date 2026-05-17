@@ -12,7 +12,7 @@ Dedicated production-oriented FMCSA SAFER MC carrier importer built with:
 ## Platform scope
 
 - Sequential FMCSA SAFER scraping by MC number
-- Carrier enrichment (website, email, operational metadata)
+- Carrier enrichment (website and operational metadata)
 - Equipment/truck inference and fleet-size classification
 - Supabase persistence of enriched lead-intelligence fields
 - Carrier dashboard with enrichment/status badges
@@ -66,7 +66,6 @@ It creates `public.carriers` with:
 - `legal_name` (text)
 - `dba_name` (text)
 - `owner_status` (text)
-- `email_address` (text)
 - `phone` (text)
 - `power_units` (integer)
 - `drivers` (integer)
