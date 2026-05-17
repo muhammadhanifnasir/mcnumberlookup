@@ -521,11 +521,9 @@ export async function scrapeCarrierByMcWithPage(
 
   const supplementalUrls = await discoverSupplementalPageUrls(page, sourceUrl);
   const registrationUrl = usdotNumber ? buildCarrierRegistrationUrl(usdotNumber) : undefined;
-  const supplementalUrlsWithRegistration = (
-    registrationUrl
-    ? [...new Set([registrationUrl, ...supplementalUrls])]
-    : supplementalUrls
-  ).slice(0, MAX_SUPPLEMENTAL_PAGES_PER_CARRIER);
+  const supplementalUrlsWithRegistration = [
+    ...new Set(registrationUrl ? [registrationUrl, ...supplementalUrls] : supplementalUrls),
+  ].slice(0, MAX_SUPPLEMENTAL_PAGES_PER_CARRIER);
   const supplementalData = await collectSupplementalPageData(
     page,
     supplementalUrlsWithRegistration,
@@ -595,7 +593,9 @@ export async function scrapeCarrierByMcWithPage(
     extractMultiLineTextField(combinedBodyText, "Physical Address", 2) ??
     extractTextField(combinedBodyText, "Physical Address") ??
     extractMultiLineTextField(combinedBodyText, "Address", 2) ??
-    extractTextField(combinedBodyText, "Address");
+    extractTextField(combinedBodyText, "Address") ??
+    extractMultiLineTextField(bodyText, "Physical Address", 2) ??
+    extractTextField(bodyText, "Physical Address");
 
   const data: ScrapedCarrierData = {
     mcNumber,
