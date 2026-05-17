@@ -569,9 +569,6 @@ export async function scrapeCarrierByMcWithPage(
   }
 
   const emailAddress =
-    extractEmail(
-      queryFieldMap["email address"] ?? queryFieldMap["email"] ?? queryFieldMap["e-mail"],
-    ) ??
     extractEmail(combinedBodyText) ??
     combinedMailtoHrefs
       .map((href) => extractEmailFromMailtoHref(href))
