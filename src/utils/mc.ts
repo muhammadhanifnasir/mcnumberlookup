@@ -53,6 +53,8 @@ export function parseMcNumbers(raw: string) {
     }
 
     if (/[/:]/.test(cleaned) && matches.length > 1) {
+      // Rows pasted from tables often contain trailing date/time values; keep the first numeric token
+      // as the intended MC number and ignore timestamp fragments.
       unique.add(matches[0]);
       continue;
     }
