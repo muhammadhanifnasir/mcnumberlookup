@@ -195,24 +195,46 @@ async function extractPageBodyText(page: Page): Promise<string> {
 }
 
 async function extractPageLinkHrefs(page: Page): Promise<{ mailtoHrefs: string[]; websiteHrefs: string[] }> {
-  const mailtoHrefs = await page
-    .locator('a[href^="mailto:"]')
-    .evaluateAll((anchors) =>
-      anchors
-        .map((anchor) => anchor.getAttribute("href"))
-        .filter((href): href is string => typeof href === "string"),
-    )
-    .catch(() => []);
-  const websiteHrefs = await page
-    .locator('a[href^="http://"], a[href^="https://"]')
-    .evaluateAll((anchors) =>
-      anchors
-        .map((anchor) => anchor.getAttribute("href"))
-        .filter((href): href is string => typeof href === "string"),
-    )
+  const rawCandidates = await page
+    .evaluate(() => {
+      const values: string[] = [];
+
+      document.querySelectorAll("a[href]").forEach((element) => {
+        const href = element.getAttribute("href");
+        if (href) values.push(href);
+      });
+
+      document.querySelectorAll("[onclick]").forEach((element) => {
+        const onClick = element.getAttribute("onclick");
+        if (onClick) values.push(onClick);
+      });
+
+      return values;
+    })
     .catch(() => []);
 
-  return { mailtoHrefs, websiteHrefs };
+  const mailtoSet = new Set<string>();
+  const websiteSet = new Set<string>();
+  const baseUrl = page.url();
+
+  for (const candidate of rawCandidates) {
+    for (const match of candidate.matchAll(/mailto:[^\s"'<>]+/gi)) {
+      const href = match[0]?.trim();
+      if (href) mailtoSet.add(href);
+    }
+
+    const extractedUrls = extractUrlCandidates(candidate);
+    for (const extracted of extractedUrls) {
+      const absoluteUrl = toAbsoluteHttpUrl(extracted, baseUrl);
+      if (!absoluteUrl) continue;
+      websiteSet.add(absoluteUrl);
+    }
+  }
+
+  return {
+    mailtoHrefs: [...mailtoSet],
+    websiteHrefs: [...websiteSet],
+  };
 }
 
 function isPopupTriggerAttribute(value: string | null | undefined): boolean {
