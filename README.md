@@ -46,6 +46,8 @@ NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=
 NEXT_PUBLIC_GOOGLE_SCRIPT_NONCE=
 ```
 
+`SUPABASE_URL` is used as a server-side fallback when `NEXT_PUBLIC_SUPABASE_URL` is not available.
+
 ## Supabase schema
 
 Run the migrations in:
