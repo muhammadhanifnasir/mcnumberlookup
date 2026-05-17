@@ -1,7 +1,7 @@
 export function getSupabaseUrl() {
-  const value = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   if (!value) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL is required.");
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL is required.");
   }
   return value;
 }
