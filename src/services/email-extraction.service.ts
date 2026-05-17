@@ -3,7 +3,7 @@ import { normalizeEmail, normalizeWebsiteUrl } from "@/utils/normalization";
 const CONTACT_PAGE_TIMEOUT_MS = 12_000;
 const EMAIL_PATTERN =
   /\b[A-Z0-9](?:[A-Z0-9._%+-]{0,62}[A-Z0-9])?@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9-]{2,})+\b/gi;
-const CONTACT_PATHS = ["/contact", "/contact-us", "/about", "/about-us", "/ai", "/ai-tools"];
+const CONTACT_PATHS = ["/contact", "/contact-us", "/about", "/about-us"];
 
 async function fetchHtml(url: string): Promise<string | undefined> {
   const controller = new AbortController();
@@ -36,11 +36,22 @@ function extractValidEmailsFromHtml(html: string): string[] {
   );
 }
 
+function buildUrlsToTry(baseWebsite: string): string[] {
+  const urls = new Set<string>([baseWebsite]);
+
+  for (const path of CONTACT_PATHS) {
+    const normalized = normalizeWebsiteUrl(new URL(path, baseWebsite).toString());
+    if (normalized) urls.add(normalized);
+  }
+
+  return [...urls];
+}
+
 export async function extractBusinessEmailFromWebsite(website: string): Promise<string | undefined> {
   const baseWebsite = normalizeWebsiteUrl(website);
   if (!baseWebsite) return undefined;
 
-  const urlsToTry = [baseWebsite, ...CONTACT_PATHS.map((path) => `${baseWebsite}${path}`)];
+  const urlsToTry = buildUrlsToTry(baseWebsite);
   for (const url of urlsToTry) {
     const html = await fetchHtml(url);
     if (!html) continue;

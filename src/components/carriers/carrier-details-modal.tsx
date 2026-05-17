@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { StatusBadge } from "@/components/carriers/status-badge";
 import { Button } from "@/components/ui/button";
 import type { CarrierRecord } from "@/types/carrier";
+import { normalizeAuthorityStatusLabel } from "@/utils/parser";
 
 function DetailsRow({ label, value }: { label: string; value?: string }) {
   return (
@@ -71,7 +72,10 @@ export function CarrierDetailsModal({ carrier, onClose }: CarrierDetailsModalPro
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailsRow label="MC Number" value={carrier.mcNumber} />
             <DetailsRow label="USDOT Number" value={carrier.usdotNumber} />
-            <DetailsRow label="Authority Status" value={carrier.authorityStatus} />
+            <DetailsRow
+              label="Authority Status"
+              value={normalizeAuthorityStatusLabel(carrier.authorityStatus)}
+            />
             <DetailsRow label="Authority Date" value={carrier.authorityDate} />
             <DetailsRow label="Legal Name" value={carrier.legalName ?? carrier.dbaName} />
             <DetailsRow label="Owner Status" value={carrier.ownerStatus} />
