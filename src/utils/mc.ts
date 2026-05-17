@@ -36,10 +36,26 @@ export function parseMcNumbers(raw: string) {
       }
     }
 
+    const explicitMcMatches = [...trimmed.matchAll(/\bMC[-\s]*(\d+)\b/gi)];
+    if (explicitMcMatches.length > 0) {
+      for (const match of explicitMcMatches) {
+        const mc = match[1];
+        if (mc) unique.add(mc);
+      }
+      continue;
+    }
+
     const cleaned = normalizeMcNumber(line);
     const matches = cleaned.match(MC_DIGIT_REGEX);
 
     if (!matches) {
+      continue;
+    }
+
+    if (/[/:]/.test(cleaned) && matches.length > 1) {
+      // Rows pasted from tables often contain trailing date/time values; keep the first numeric token
+      // as the intended MC number and ignore timestamp fragments.
+      unique.add(matches[0]);
       continue;
     }
 
