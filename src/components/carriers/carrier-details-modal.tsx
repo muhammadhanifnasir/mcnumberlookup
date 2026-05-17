@@ -8,6 +8,18 @@ import { Button } from "@/components/ui/button";
 import type { CarrierRecord } from "@/types/carrier";
 import { normalizeAuthorityStatusLabel } from "@/utils/parser";
 
+function getDisplaySourcePath(sourceUrl: string) {
+  try {
+    const parsed = new URL(sourceUrl);
+    if (parsed.hostname === "safer.fmcsa.dot.gov") {
+      return `${parsed.origin}${parsed.pathname}`;
+    }
+  } catch {
+    // keep raw value if parsing fails
+  }
+  return sourceUrl;
+}
+
 function DetailsRow({ label, value }: { label: string; value?: string }) {
   return (
     <div className="space-y-1 rounded-lg border border-border p-3">
@@ -91,7 +103,7 @@ export function CarrierDetailsModal({ carrier, onClose }: CarrierDetailsModalPro
             <DetailsRow label="Authority Information" value={carrier.authorityInformation} />
             <DetailsRow label="Data Source" value={carrier.dataSource} />
             <DetailsRow label="Created At" value={new Date(carrier.scrapedAt).toLocaleString()} />
-            <DetailsRow label="Source URL" value={carrier.sourceUrl} />
+            <DetailsRow label="Source URL" value={getDisplaySourcePath(carrier.sourceUrl)} />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

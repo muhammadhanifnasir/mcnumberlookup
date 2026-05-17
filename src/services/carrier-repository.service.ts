@@ -20,7 +20,6 @@ const CARRIER_SEARCH_FIELDS = [
   "usdot_number",
   "legal_name",
   "dba_name",
-  "email_address",
   "owner_status",
   "physical_address",
   "truck_type",
@@ -132,7 +131,6 @@ export function buildCarrierInsertPayload(record: CarrierRecord): CarrierInsertP
     operating_authority_status: record.operatingAuthorityStatus ?? null,
     legal_name: record.legalName ?? null,
     dba_name: record.dbaName ?? null,
-    email_address: record.emailAddress ?? null,
     phone: record.phone ?? null,
     power_units: parseOptionalInteger(record.powerUnits),
     drivers: parseOptionalInteger(record.drivers),
@@ -162,7 +160,6 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
   }
   if (record.legalName !== undefined) payload.legal_name = record.legalName ?? null;
   if (record.dbaName !== undefined) payload.dba_name = record.dbaName ?? null;
-  if (record.emailAddress !== undefined) payload.email_address = record.emailAddress ?? null;
   if (record.phone !== undefined) payload.phone = record.phone ?? null;
   if (record.powerUnits !== undefined) payload.power_units = parseOptionalInteger(record.powerUnits);
   if (record.drivers !== undefined) payload.drivers = parseOptionalInteger(record.drivers);
@@ -195,7 +192,6 @@ function fromSupabaseRow(row: CarrierRow): CarrierRecord {
     operatingAuthorityStatus: row.operating_authority_status ?? undefined,
     legalName: row.legal_name ?? undefined,
     dbaName: row.dba_name ?? undefined,
-    emailAddress: row.email_address ?? undefined,
     phone: row.phone ?? undefined,
     powerUnits: row.power_units !== null ? String(row.power_units) : undefined,
     drivers: row.drivers !== null ? String(row.drivers) : undefined,
