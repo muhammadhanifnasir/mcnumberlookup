@@ -7,6 +7,7 @@ export type Database = {
         Row: {
           created_at: string;
           dba_name: string | null;
+          email_address: string | null;
           drivers: number | null;
           id: string;
           legal_name: string | null;
@@ -33,6 +34,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           dba_name?: string | null;
+          email_address?: string | null;
           drivers?: number | null;
           id?: string;
           legal_name?: string | null;
@@ -59,6 +61,7 @@ export type Database = {
         Update: {
           created_at?: string;
           dba_name?: string | null;
+          email_address?: string | null;
           drivers?: number | null;
           id?: string;
           legal_name?: string | null;
