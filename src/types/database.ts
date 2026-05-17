@@ -10,7 +10,6 @@ export type Database = {
           drivers: number | null;
           id: string;
           legal_name: string | null;
-          email_address: string | null;
           mc_number: string;
           mcs150_form_date: string | null;
           authority_status: string | null;
@@ -37,7 +36,6 @@ export type Database = {
           drivers?: number | null;
           id?: string;
           legal_name?: string | null;
-          email_address?: string | null;
           mc_number: string;
           mcs150_form_date?: string | null;
           authority_status?: string | null;
@@ -64,7 +62,6 @@ export type Database = {
           drivers?: number | null;
           id?: string;
           legal_name?: string | null;
-          email_address?: string | null;
           mc_number?: string;
           mcs150_form_date?: string | null;
           authority_status?: string | null;
