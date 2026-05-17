@@ -83,6 +83,21 @@ export function normalizeStatus(raw: string | undefined): string | undefined {
   return raw.replace(/\s+/g, " ").trim();
 }
 
+export function normalizeAuthorityStatusLabel(raw: string | undefined): "Auth" | "Not Auth" | undefined {
+  const normalized = normalizeStatus(raw);
+  if (!normalized) return undefined;
+
+  const lower = normalized.toLowerCase();
+  if (/\b(not\s+authorized|not\s+auth|unauthorized|revoked|inactive|none)\b/.test(lower)) {
+    return "Not Auth";
+  }
+  if (/\bauthorized\b|\bauth\b/.test(lower)) {
+    return "Auth";
+  }
+
+  return undefined;
+}
+
 /**
  * Extracts the first integer (possibly comma-separated) from a raw string.
  * Returns the digits-only string, e.g. "1,234" → "1234".

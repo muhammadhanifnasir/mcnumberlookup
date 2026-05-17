@@ -15,6 +15,7 @@ import {
   extractNumber,
   extractPhone,
   extractTextField,
+  normalizeAuthorityStatusLabel,
   normalizeStatus,
 } from "@/utils/parser";
 import { normalizeWebsiteUrl } from "@/utils/normalization";
@@ -599,6 +600,7 @@ export async function scrapeCarrierByMcWithPage(
     queryFieldMap["operating authority status"] ??
     queryFieldMap["authority status"] ??
     extractFirstTextField(combinedBodyText, ["Operating Authority Status", "Authority Status"]);
+  const authorityStatusLabel = normalizeAuthorityStatusLabel(authorityStatus);
   // SAFER query page uses "MCS-150 Form Date" rather than "Authority Date" on many records.
   const authorityDateRaw =
     queryFieldMap["mcs-150 form date"] ??
@@ -629,10 +631,10 @@ export async function scrapeCarrierByMcWithPage(
     ),
     ownerStatus: normalizeStatus(extractFirstTextField(bodyText, ["Owner Status", "Entity Type"])),
     usdotNumber,
-    authorityStatus: normalizeStatus(authorityStatus),
+    authorityStatus: authorityStatusLabel,
     authorityDate: authorityDate?.trim(),
     // Keep legacy field populated for backwards compatibility with existing consumers.
-    operatingAuthorityStatus: normalizeStatus(authorityStatus),
+    operatingAuthorityStatus: authorityStatusLabel,
     legalName,
     dbaName: extractTextField(bodyText, "DBA Name"),
     emailAddress,

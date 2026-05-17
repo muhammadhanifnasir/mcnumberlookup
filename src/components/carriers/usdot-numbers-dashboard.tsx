@@ -10,6 +10,7 @@ import { TableShell } from "@/components/common/table-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { readApiResponse } from "@/lib/api-client";
 import type { CarrierRecord } from "@/types/carrier";
+import { normalizeAuthorityStatusLabel } from "@/utils/parser";
 
 type CarrierListResponse = {
   data?: CarrierRecord[];
@@ -117,7 +118,7 @@ export function UsdotNumbersDashboard() {
                     {record.usdotNumber ?? "-"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
-                    {record.authorityStatus ?? "-"}
+                    {normalizeAuthorityStatusLabel(record.authorityStatus) ?? "-"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                     {record.authorityDate ?? "-"}
