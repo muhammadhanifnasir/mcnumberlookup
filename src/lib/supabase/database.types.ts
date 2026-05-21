@@ -17,6 +17,7 @@ export type Database = {
           legal_name: string | null;
           dba_name: string | null;
           phone: string | null;
+          email_address: string | null;
           power_units: number | null;
           drivers: number | null;
           physical_address: string | null;
@@ -43,6 +44,7 @@ export type Database = {
           legal_name?: string | null;
           dba_name?: string | null;
           phone?: string | null;
+          email_address?: string | null;
           power_units?: number | null;
           drivers?: number | null;
           physical_address?: string | null;
@@ -69,6 +71,7 @@ export type Database = {
           legal_name?: string | null;
           dba_name?: string | null;
           phone?: string | null;
+          email_address?: string | null;
           power_units?: number | null;
           drivers?: number | null;
           physical_address?: string | null;

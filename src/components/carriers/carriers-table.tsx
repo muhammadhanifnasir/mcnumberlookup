@@ -13,6 +13,7 @@ const columns = [
   { key: "physicalAddress", label: "Physical Address" },
   { key: "fleetSizeCategory", label: "Fleet Category" },
   { key: "phone", label: "Phone" },
+  { key: "emailAddress", label: "Email" },
   { key: "updated", label: "Scraped At" },
 ];
 
@@ -32,6 +33,7 @@ export function CarriersTable({ data }: { data: CarrierRecord[] }) {
           <td className="px-4 py-3 text-muted-foreground">{carrier.physicalAddress ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.fleetSizeCategory ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.phone ?? "-"}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{carrier.emailAddress ?? "-"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
             {new Date(carrier.scrapedAt).toLocaleString()}
           </td>
