@@ -29,6 +29,27 @@ function DetailsRow({ label, value }: { label: string; value?: string }) {
   );
 }
 
+function EmailDetailsRow({ label, email }: { label: string; email?: string }) {
+  const normalizedEmail = email?.trim();
+  return (
+    <div className="space-y-1 rounded-lg border border-border p-3">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+      {normalizedEmail ? (
+        <a
+          className="text-sm text-primary underline"
+          href={`mailto:${normalizedEmail}`}
+          aria-label={`Send email to ${normalizedEmail}`}
+          title={`Send email to ${normalizedEmail}`}
+        >
+          {normalizedEmail}
+        </a>
+      ) : (
+        <p className="text-sm text-card-foreground">-</p>
+      )}
+    </div>
+  );
+}
+
 type CarrierDetailsModalProps = {
   carrier: CarrierRecord | null;
   onClose: () => void;
@@ -92,6 +113,7 @@ export function CarrierDetailsModal({ carrier, onClose }: CarrierDetailsModalPro
             <DetailsRow label="Legal Name" value={carrier.legalName ?? carrier.dbaName} />
             <DetailsRow label="Owner Status" value={carrier.ownerStatus} />
             <DetailsRow label="Phone" value={carrier.phone} />
+            <EmailDetailsRow label="Email" email={carrier.emailAddress} />
             <DetailsRow label="Power Units" value={carrier.powerUnits} />
             <DetailsRow label="Drivers" value={carrier.drivers} />
             <DetailsRow label="Physical Address" value={carrier.physicalAddress} />
