@@ -35,7 +35,12 @@ function EmailDetailsRow({ label, email }: { label: string; email?: string }) {
     <div className="space-y-1 rounded-lg border border-border p-3">
       <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
       {normalizedEmail ? (
-        <a className="text-sm text-primary underline" href={`mailto:${normalizedEmail}`}>
+        <a
+          className="text-sm text-primary underline"
+          href={`mailto:${normalizedEmail}`}
+          aria-label={`Send email to ${normalizedEmail}`}
+          title={`Send email to ${normalizedEmail}`}
+        >
           {normalizedEmail}
         </a>
       ) : (
