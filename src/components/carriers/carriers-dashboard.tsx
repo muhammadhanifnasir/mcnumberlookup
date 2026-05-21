@@ -53,6 +53,7 @@ const EXPORT_HEADERS: Array<{ label: string; value: (record: CarrierRecord) => s
   { label: "DBA Name", value: (record) => record.dbaName },
   { label: "Owner Status", value: (record) => record.ownerStatus },
   { label: "Phone", value: (record) => record.phone },
+  { label: "Email", value: (record) => record.emailAddress },
   { label: "Power Units", value: (record) => record.powerUnits },
   { label: "Drivers", value: (record) => record.drivers },
   { label: "Physical Address", value: (record) => record.physicalAddress },
@@ -406,6 +407,11 @@ export function CarriersDashboard() {
         cell: ({ row }) => row.original.phone ?? "-",
       },
       {
+        accessorKey: "emailAddress",
+        header: "Email",
+        cell: ({ row }) => row.original.emailAddress ?? "-",
+      },
+      {
         accessorKey: "powerUnits",
         header: "Power Units",
         cell: ({ row }) => row.original.powerUnits ?? "-",
@@ -587,6 +593,7 @@ export function CarriersDashboard() {
                   <div>Authority Date: {row.authorityDate ?? "-"}</div>
                   <div>Owner: {row.ownerStatus ?? "-"}</div>
                   <div>Phone: {row.phone ?? "-"}</div>
+                  <div>Email: {row.emailAddress ?? "-"}</div>
                   <div>Fleet: {row.fleetSizeCategory ?? "-"}</div>
                   <div>Power Units: {row.powerUnits ?? "-"}</div>
                   <div>Drivers: {row.drivers ?? "-"}</div>
