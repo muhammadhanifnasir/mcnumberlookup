@@ -185,6 +185,7 @@ export function buildCarrierUpdatePayload(record: Partial<CarrierRecord>): Carri
 function fromSupabaseRow(row: CarrierRow): CarrierRecord {
   return {
     id: row.id,
+    updatedAt: row.updated_at,
     mcNumber: row.mc_number,
     usdotStatus: row.usdot_status ?? undefined,
     ownerStatus: row.owner_status ?? undefined,

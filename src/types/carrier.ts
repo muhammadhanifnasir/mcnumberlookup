@@ -22,6 +22,7 @@ export type {
 };
 
 export type ScrapedCarrierData = {
+  updatedAt?: string;
   mcNumber: string;
   usdotStatus?: string;
   ownerStatus?: string;

@@ -358,6 +358,11 @@ export function CarriersDashboard() {
         ),
       },
       {
+        accessorKey: "id",
+        header: "ID",
+        cell: ({ row }) => row.original.id ?? "-",
+      },
+      {
         accessorKey: "mcNumber",
         header: "MC Number",
         cell: ({ row }) => <span className="font-medium">MC {row.original.mcNumber}</span>,
@@ -378,9 +383,24 @@ export function CarriersDashboard() {
         cell: ({ row }) => row.original.authorityDate ?? "-",
       },
       {
+        accessorKey: "mcs150FormDate",
+        header: "MCS-150 Form Date",
+        cell: ({ row }) => row.original.mcs150FormDate ?? "-",
+      },
+      {
+        accessorKey: "operatingAuthorityStatus",
+        header: "Operating Authority Status",
+        cell: ({ row }) => row.original.operatingAuthorityStatus ?? "-",
+      },
+      {
         accessorKey: "legalName",
         header: "Legal Name",
-        cell: ({ row }) => row.original.legalName ?? row.original.dbaName ?? "-",
+        cell: ({ row }) => row.original.legalName ?? "-",
+      },
+      {
+        accessorKey: "dbaName",
+        header: "DBA Name",
+        cell: ({ row }) => row.original.dbaName ?? "-",
       },
       {
         accessorKey: "ownerStatus",
@@ -422,9 +442,39 @@ export function CarriersDashboard() {
         cell: ({ row }) => row.original.drivers ?? "-",
       },
       {
+        accessorKey: "truckType",
+        header: "Truck Type",
+        cell: ({ row }) => row.original.truckType ?? "-",
+      },
+      {
+        accessorKey: "cargoCarried",
+        header: "Cargo Carried",
+        cell: ({ row }) => row.original.cargoCarried ?? "-",
+      },
+      {
+        accessorKey: "operationClassification",
+        header: "Operation Classification",
+        cell: ({ row }) => row.original.operationClassification ?? "-",
+      },
+      {
+        accessorKey: "carrierOperation",
+        header: "Carrier Operation",
+        cell: ({ row }) => row.original.carrierOperation ?? "-",
+      },
+      {
+        accessorKey: "authorityInformation",
+        header: "Authority Information",
+        cell: ({ row }) => row.original.authorityInformation ?? "-",
+      },
+      {
         accessorKey: "usdotStatus",
         header: "USDOT Status",
         cell: ({ row }) => <StatusBadge status={row.original.usdotStatus} kind="usdot" />,
+      },
+      {
+        accessorKey: "dataSource",
+        header: "Data Source",
+        cell: ({ row }) => row.original.dataSource ?? "-",
       },
       {
         id: "createdAt",
@@ -433,6 +483,16 @@ export function CarriersDashboard() {
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-muted-foreground">
             {new Date(row.original.scrapedAt).toLocaleString()}
+          </span>
+        ),
+      },
+      {
+        id: "updatedAt",
+        accessorFn: (row) => (row.updatedAt ? new Date(row.updatedAt).getTime() : 0),
+        header: "Updated At",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-muted-foreground">
+            {row.original.updatedAt ? new Date(row.original.updatedAt).toLocaleString() : "-"}
           </span>
         ),
       },
@@ -588,15 +648,27 @@ export function CarriersDashboard() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div className="col-span-2">ID: {row.id ?? "-"}</div>
                   <div>USDOT: {row.usdotNumber ?? "-"}</div>
                   <div>Authority Status: {normalizeAuthorityStatusLabel(row.authorityStatus) ?? "-"}</div>
                   <div>Authority Date: {row.authorityDate ?? "-"}</div>
+                  <div>MCS-150: {row.mcs150FormDate ?? "-"}</div>
+                  <div>Operating Authority: {row.operatingAuthorityStatus ?? "-"}</div>
+                  <div>Legal Name: {row.legalName ?? "-"}</div>
+                  <div>DBA Name: {row.dbaName ?? "-"}</div>
                   <div>Owner: {row.ownerStatus ?? "-"}</div>
                   <div>Phone: {row.phone ?? "-"}</div>
                   <div>Email: {row.emailAddress ?? "-"}</div>
                   <div>Fleet: {row.fleetSizeCategory ?? "-"}</div>
                   <div>Power Units: {row.powerUnits ?? "-"}</div>
                   <div>Drivers: {row.drivers ?? "-"}</div>
+                  <div>Truck Type: {row.truckType ?? "-"}</div>
+                  <div>Cargo Carried: {row.cargoCarried ?? "-"}</div>
+                  <div>Operation Class: {row.operationClassification ?? "-"}</div>
+                  <div>Carrier Operation: {row.carrierOperation ?? "-"}</div>
+                  <div className="col-span-2">Authority Info: {row.authorityInformation ?? "-"}</div>
+                  <div>Data Source: {row.dataSource ?? "-"}</div>
+                  <div>Updated At: {row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "-"}</div>
                   <div className="col-span-2">Address: {row.physicalAddress ?? "-"}</div>
                 </div>
                 <div className="flex items-center justify-between gap-2">
