@@ -143,25 +143,25 @@ function extractFirstEmailFromRaw(raw: string): string | undefined {
   const candidates = new Set<string>([raw]);
 
   const htmlDecoded = decodeHtmlEntities(raw);
-  if (htmlDecoded) candidates.add(htmlDecoded);
+  if (htmlDecoded && htmlDecoded !== raw) candidates.add(htmlDecoded);
 
   try {
     const uriDecoded = decodeURIComponent(raw);
-    if (uriDecoded) candidates.add(uriDecoded);
+    if (uriDecoded && uriDecoded !== raw) candidates.add(uriDecoded);
     const uriThenHtml = decodeHtmlEntities(uriDecoded);
-    if (uriThenHtml) candidates.add(uriThenHtml);
+    if (uriThenHtml && uriThenHtml !== raw && uriThenHtml !== uriDecoded) candidates.add(uriThenHtml);
   } catch {
     // ignore malformed URI encoding
   }
 
   for (const candidate of candidates) {
     const compacted = candidate
-      .replace(/\s*@\s*/g, "@")
-      .replace(/\s*\.\s*/g, ".")
       .replace(/\(\s*at\s*\)|\[\s*at\s*\]/gi, "@")
       .replace(/\(\s*dot\s*\)|\[\s*dot\s*\]/gi, ".")
       .replace(/\s+at\s+/gi, "@")
-      .replace(/\s+dot\s+/gi, ".");
+      .replace(/\s+dot\s+/gi, ".")
+      .replace(/\s*@\s*/g, "@")
+      .replace(/\s*\.\s*/g, ".");
     const email = compacted.match(EMAIL_PATTERN)?.[0];
     if (email) return email.trim();
   }
