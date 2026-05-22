@@ -113,6 +113,62 @@ const US_PHONE_PATTERN =
 const EMAIL_PATTERN =
   /\b[A-Z0-9](?:[A-Z0-9._%+-]{0,62}[A-Z0-9])?@[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?(?:\.[A-Z0-9-]{2,})+\b/i;
 
+function decodeHtmlEntities(raw: string): string {
+  const namedEntities: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+  };
+
+  return raw.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (full, entity: string) => {
+    const lowered = entity.toLowerCase();
+    if (lowered.startsWith("#x")) {
+      const codePoint = Number.parseInt(lowered.slice(2), 16);
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : full;
+    }
+    if (lowered.startsWith("#")) {
+      const codePoint = Number.parseInt(lowered.slice(1), 10);
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : full;
+    }
+    return namedEntities[lowered] ?? full;
+  });
+}
+
+function extractFirstEmailFromRaw(raw: string): string | undefined {
+  if (!raw) return undefined;
+
+  const candidates = new Set<string>([raw]);
+
+  const htmlDecoded = decodeHtmlEntities(raw);
+  if (htmlDecoded) candidates.add(htmlDecoded);
+
+  try {
+    const uriDecoded = decodeURIComponent(raw);
+    if (uriDecoded) candidates.add(uriDecoded);
+    const uriThenHtml = decodeHtmlEntities(uriDecoded);
+    if (uriThenHtml) candidates.add(uriThenHtml);
+  } catch {
+    // ignore malformed URI encoding
+  }
+
+  for (const candidate of candidates) {
+    const compacted = candidate
+      .replace(/\s*@\s*/g, "@")
+      .replace(/\s*\.\s*/g, ".")
+      .replace(/\(\s*at\s*\)|\[\s*at\s*\]/gi, "@")
+      .replace(/\(\s*dot\s*\)|\[\s*dot\s*\]/gi, ".")
+      .replace(/\s+at\s+/gi, "@")
+      .replace(/\s+dot\s+/gi, ".");
+    const email = compacted.match(EMAIL_PATTERN)?.[0];
+    if (email) return email.trim();
+  }
+
+  return undefined;
+}
+
 export function extractPhoneNumber(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   const match = raw.match(US_PHONE_PATTERN);
@@ -135,7 +191,9 @@ export function extractPhone(text: string): string | undefined {
 
 export function extractEmail(text: string): string | undefined {
   const labeledEmail = extractFirstTextField(text, ["Email Address", "Email", "E-mail"]);
-  const email = labeledEmail?.match(EMAIL_PATTERN)?.[0] ?? text.match(EMAIL_PATTERN)?.[0];
+  const email =
+    (labeledEmail ? extractFirstEmailFromRaw(labeledEmail) : undefined) ??
+    extractFirstEmailFromRaw(text);
   return email?.trim();
 }
 
@@ -155,6 +213,6 @@ export function extractEmailFromMailtoHref(href: string | null | undefined): str
     decodedAddress = addressPart;
   }
 
-  const email = decodedAddress.match(EMAIL_PATTERN)?.[0];
+  const email = extractFirstEmailFromRaw(decodedAddress);
   return email?.trim();
 }
