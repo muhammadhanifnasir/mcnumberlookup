@@ -1,4 +1,4 @@
-# MC EXTRACTION
+# MC Lookup
 
 Dedicated production-oriented FMCSA SAFER MC carrier importer built with:
 
